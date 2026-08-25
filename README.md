@@ -146,6 +146,24 @@ python simulator/generation/generate_world.py
 python simulator/generation/validate_dataset.py
 ```
 
+### Run Offline LLM Diagnosis
+
+```bash
+# Set LLM API key
+export LLM_API_KEY=your_anthropic_api_key
+
+# Activate Python environment
+cd services/api
+source .venv/bin/activate
+
+# Run batch diagnosis (or use --dry-run for testing)
+cd ../..
+python ai/diagnosis/batch_diagnose.py
+
+# Analyze quality
+python ai/diagnosis/analyze_quality.py
+```
+
 ### Run Backend
 
 ```bash
