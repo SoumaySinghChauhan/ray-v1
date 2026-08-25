@@ -62,7 +62,7 @@ class BatchDiagnoser:
         Args:
             dataset_path: Path to frozen dataset
             output_path: Path for diagnosis output
-            llm_provider: LLM provider (anthropic or openai)
+            llm_provider: LLM provider (anthropic, openai, or gemini)
             model: Model name override
             max_retries: Maximum retry attempts per opportunity
             dry_run: If True, skip actual LLM calls (for testing)
@@ -82,6 +82,8 @@ class BatchDiagnoser:
             self.model = "claude-3-5-sonnet-20241022"
         elif llm_provider == "openai":
             self.model = "gpt-4-turbo-preview"
+        elif llm_provider == "gemini":
+            self.model = "gemini-1.5-pro"
         else:
             raise ValueError(f"Unsupported LLM provider: {llm_provider}")
 
@@ -120,6 +122,15 @@ class BatchDiagnoser:
             if not api_key:
                 raise ValueError("OPENAI_API_KEY not set")
             self.client = openai.OpenAI(api_key=api_key)
+
+        elif self.llm_provider == "gemini":
+            import google.generativeai as genai
+            import os
+            api_key = os.getenv("LLM_API_KEY") or os.getenv("GEMINI_API_KEY")
+            if not api_key:
+                raise ValueError("GEMINI_API_KEY not set")
+            genai.configure(api_key=api_key)
+            self.client = genai.GenerativeModel(self.model)
 
     def diagnose(self):
         """Run batch diagnosis on all opportunities."""
@@ -309,6 +320,18 @@ class BatchDiagnoser:
 
             content = response.choices[0].message.content
 
+        elif self.llm_provider == "gemini":
+            full_prompt = f"{DIAGNOSIS_SYSTEM_PROMPT}\n\n{prompt}"
+            response = self.client.generate_content(
+                full_prompt,
+                generation_config={
+                    "temperature": 0.7,
+                    "max_output_tokens": 1024,
+                }
+            )
+
+            content = response.text
+
         duration_ms = (time.time() - start_time) * 1000
 
         # Parse JSON
@@ -410,7 +433,7 @@ def main():
     )
     parser.add_argument(
         "--provider",
-        choices=["anthropic", "openai"],
+        choices=["anthropic", "openai", "gemini"],
         default="anthropic",
         help="LLM provider",
     )
