@@ -17,6 +17,7 @@ pandas==2.2.3
 numpy==2.1.2
 lightgbm==4.5.0
 xgboost==2.1.1
+pyarrow==18.1.0
 
 # LLM Integration
 anthropic==0.39.0

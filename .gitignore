@@ -70,7 +70,8 @@ secrets/
 ml/models/*.bin
 ml/models/*.pt
 
-# Datasets (generated)
+# Datasets (generated - regenerate with generate_world.py)
+datasets/
 simulator/generation/output/
 evaluation/benchmark/results/
 data/

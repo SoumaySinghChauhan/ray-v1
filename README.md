@@ -131,17 +131,46 @@ LLM_API_KEY=your_api_key
 
 ## Development
 
-```bash
-# Run backend
-cd services/api
-python -m uvicorn main:app --reload
+### Generate Synthetic Dataset
 
-# Run frontend
+```bash
+# Activate Python environment
+cd services/api
+source .venv/bin/activate
+
+# Generate world (one-time, then frozen)
+cd ../..
+python simulator/generation/generate_world.py
+
+# Validate dataset
+python simulator/generation/validate_dataset.py
+```
+
+### Run Backend
+
+```bash
+cd services/api
+source .venv/bin/activate
+python -m uvicorn main:app --reload
+```
+
+### Run Frontend
+
+```bash
 cd apps/web
 npm run dev
+```
 
-# Run tests
-pytest tests/
+### Run Tests
+
+```bash
+# Activate environment
+cd services/api
+source .venv/bin/activate
+
+# Run all tests
+cd ../..
+pytest tests/ -v
 ```
 
 ## V1 Configuration Defaults
