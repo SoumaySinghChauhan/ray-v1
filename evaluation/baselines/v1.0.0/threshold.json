@@ -1,0 +1,122 @@
+{
+  "best_threshold": 0.0,
+  "best_metric_name": "net_recovery",
+  "best_metric_value": 73374.62,
+  "validation_actions_selected": 99,
+  "validation_recovery_rate": 0.150107201134401,
+  "all_results": [
+    {
+      "threshold": 0.0,
+      "actions_selected": 99,
+      "net_recovery": 73374.62,
+      "recovery_rate": 0.150107201134401
+    },
+    {
+      "threshold": 16.353333333333346,
+      "actions_selected": 98,
+      "net_recovery": 72142.03,
+      "recovery_rate": 0.16892063454302142
+    },
+    {
+      "threshold": 64.12938259109312,
+      "actions_selected": 96,
+      "net_recovery": 72142.03,
+      "recovery_rate": 0.1704188427194803
+    },
+    {
+      "threshold": 101.36540909090908,
+      "actions_selected": 96,
+      "net_recovery": 72142.03,
+      "recovery_rate": 0.17253254020661563
+    },
+    {
+      "threshold": 126.0820125,
+      "actions_selected": 91,
+      "net_recovery": 72142.03,
+      "recovery_rate": 0.174325230643986
+    },
+    {
+      "threshold": 150.10614285714286,
+      "actions_selected": 87,
+      "net_recovery": 71108.03,
+      "recovery_rate": 0.17436487288360333
+    },
+    {
+      "threshold": 227.18760227272728,
+      "actions_selected": 81,
+      "net_recovery": 71108.03,
+      "recovery_rate": 0.178479755126321
+    },
+    {
+      "threshold": 294.82916666666665,
+      "actions_selected": 75,
+      "net_recovery": 70471.07999999999,
+      "recovery_rate": 0.18021954685413913
+    },
+    {
+      "threshold": 384.06870769230767,
+      "actions_selected": 68,
+      "net_recovery": 68830.93,
+      "recovery_rate": 0.17983128588918784
+    },
+    {
+      "threshold": 420.6831480993003,
+      "actions_selected": 60,
+      "net_recovery": 66296.15,
+      "recovery_rate": 0.17773802970751357
+    },
+    {
+      "threshold": 477.63175000000007,
+      "actions_selected": 53,
+      "net_recovery": 63143.829999999994,
+      "recovery_rate": 0.17361474886887804
+    },
+    {
+      "threshold": 651.1576615384614,
+      "actions_selected": 45,
+      "net_recovery": 61237.4,
+      "recovery_rate": 0.17670473857452493
+    },
+    {
+      "threshold": 1115.3004545454546,
+      "actions_selected": 38,
+      "net_recovery": 59291.5,
+      "recovery_rate": 0.17980349845876004
+    },
+    {
+      "threshold": 1447.7987500000002,
+      "actions_selected": 30,
+      "net_recovery": 50395.5,
+      "recovery_rate": 0.16849610485138256
+    },
+    {
+      "threshold": 1900.2363999999993,
+      "actions_selected": 23,
+      "net_recovery": 40378.83,
+      "recovery_rate": 0.1491035581172143
+    },
+    {
+      "threshold": 2869.8305571428573,
+      "actions_selected": 15,
+      "net_recovery": 24623.46,
+      "recovery_rate": 0.11118596721405043
+    },
+    {
+      "threshold": 4565.757178571423,
+      "actions_selected": 8,
+      "net_recovery": 10512.5,
+      "recovery_rate": 0.06261254623798808
+    },
+    {
+      "threshold": 29803.155555555557,
+      "actions_selected": 1,
+      "net_recovery": 0.0,
+      "recovery_rate": 0.0
+    }
+  ],
+  "baseline_config": {
+    "baseline_type": "historical_recovery_rate",
+    "cold_start_fallback": 0.3064018866072336,
+    "is_fitted": true
+  }
+}

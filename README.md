@@ -164,6 +164,21 @@ python ai/diagnosis/batch_diagnose.py
 python ai/diagnosis/analyze_quality.py
 ```
 
+### Engineer ML Features and Train Baseline
+
+```bash
+# Activate Python environment
+cd services/api
+source .venv/bin/activate
+
+# Engineer features (Model A: observable only)
+cd ../..
+python ml/features/engineer_features.py
+
+# Tune baseline threshold
+python evaluation/baselines/tune_baseline.py
+```
+
 ### Run Backend
 
 ```bash
