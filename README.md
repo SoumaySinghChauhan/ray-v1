@@ -67,7 +67,7 @@ ray/
 - **Frontend**: Next.js with TypeScript
 - **Database**: PostgreSQL
 - **ML**: scikit-learn, LightGBM/XGBoost (evaluated)
-- **LLM**: Provider abstraction
+- **LLM**: Provider abstraction (Anthropic, OpenAI, Google Gemini)
 
 ## Experimental Integrity
 
@@ -125,8 +125,10 @@ RAZORPAY_KEY_ID=your_key_id
 RAZORPAY_KEY_SECRET=your_key_secret
 
 # LLM Provider
-LLM_PROVIDER=anthropic  # or openai
-LLM_API_KEY=your_api_key
+LLM_PROVIDER=gemini  # or anthropic, openai
+GEMINI_API_KEY=your_gemini_api_key  # for Gemini
+# ANTHROPIC_API_KEY=your_anthropic_key  # for Anthropic
+# OPENAI_API_KEY=your_openai_key  # for OpenAI
 ```
 
 ## Development

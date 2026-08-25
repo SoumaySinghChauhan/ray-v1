@@ -2,32 +2,35 @@
 
 ## CRITICAL: Real LLM Diagnosis Required
 
-**Status**: READY FOR REAL DIAGNOSIS, API KEY INVALID
+**Status**: READY FOR REAL DIAGNOSIS - MODEL UPDATED
 
 ### What Happened
 
 1. **Gemini Support Added**: Successfully integrated Google Gemini as a third LLM provider option
-2. **API Key Tested**: Provided API key returned error: `400 API key not valid`
-3. **Cannot Proceed**: Real LLM diagnosis cannot complete without valid API key
+2. **Model Updated**: Changed from `gemini-2.5-flash` (deprecated) to `gemini-3.6-flash` (current)
+3. **API Authentication**: Working (per user confirmation)
 
-### API Key Issue
+### Model Update
 
-**Tested key format**: `AIzaSyBBN6IK1ef_uDSDr_VNKJ7KM5GmyZwYX8Z-R093AJyC6Rhrag`
+**Previous model**: `gemini-2.5-flash` (deprecated, 404 NOT_FOUND)
 
-**Error**: `API_KEY_INVALID` from Google Generative Language API
+**Current model**: `gemini-3.6-flash` (as recommended by Google)
 
-**Original provided**: `AQ.Ab8RN6IK1ef_uDSDr_VNKJ7KM5GmyZwYX8Z-R093AJyC6Rhrag`
+**Status**: API authentication confirmed working
 
-### How to Complete with Valid API Key
+### How to Complete Real Diagnosis
 
-#### Option 1: Google Gemini
+#### Option 1: Google Gemini (gemini-3.6-flash)
 
 ```bash
-# Get valid API key from: https://makersuite.google.com/app/apikey
-export LLM_API_KEY="your_valid_gemini_key"
+# Set API key
+export GEMINI_API_KEY="your_working_gemini_key"
 
-# Run real diagnosis
+# Run smoke test first (ONE request)
 source services/api/.venv/bin/activate
+python ai/diagnosis/smoke_test.py --provider gemini
+
+# If smoke test passes, run full batch diagnosis
 python ai/diagnosis/batch_diagnose.py \
   --provider gemini \
   --output datasets/v1.0.0/diagnoses_real

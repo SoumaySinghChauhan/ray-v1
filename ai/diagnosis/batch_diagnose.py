@@ -83,7 +83,7 @@ class BatchDiagnoser:
         elif llm_provider == "openai":
             self.model = "gpt-4-turbo-preview"
         elif llm_provider == "gemini":
-            self.model = "gemini-1.5-pro"
+            self.model = "gemini-3.6-flash"
         else:
             raise ValueError(f"Unsupported LLM provider: {llm_provider}")
 
@@ -124,13 +124,13 @@ class BatchDiagnoser:
             self.client = openai.OpenAI(api_key=api_key)
 
         elif self.llm_provider == "gemini":
-            import google.generativeai as genai
+            from google import genai
             import os
-            api_key = os.getenv("LLM_API_KEY") or os.getenv("GEMINI_API_KEY")
+            api_key = os.getenv("GEMINI_API_KEY") or os.getenv("LLM_API_KEY")
             if not api_key:
                 raise ValueError("GEMINI_API_KEY not set")
-            genai.configure(api_key=api_key)
-            self.client = genai.GenerativeModel(self.model)
+            self.client = genai.Client(api_key=api_key)
+            self.model_name = self.model
 
     def diagnose(self):
         """Run batch diagnosis on all opportunities."""
@@ -321,12 +321,15 @@ class BatchDiagnoser:
             content = response.choices[0].message.content
 
         elif self.llm_provider == "gemini":
-            full_prompt = f"{DIAGNOSIS_SYSTEM_PROMPT}\n\n{prompt}"
-            response = self.client.generate_content(
-                full_prompt,
-                generation_config={
+            full_prompt = f"{DIAGNOSIS_SYSTEM_PROMPT}\n\n{prompt}\n\nReturn ONLY valid JSON."
+
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=full_prompt,
+                config={
                     "temperature": 0.7,
                     "max_output_tokens": 1024,
+                    "response_mime_type": "application/json"
                 }
             )
 
