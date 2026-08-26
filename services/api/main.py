@@ -12,9 +12,9 @@ import uvicorn
 from datetime import datetime
 
 # Local imports (to be implemented)
-from action_registry import ActionType, list_available_actions, validate_action_type
-from types import FailureClass, PolicyDecision
-from config import get_config
+from .action_registry import ActionType, list_available_actions, validate_action_type
+from .types import FailureClass, PolicyDecision
+from config.v1_config import get_config
 
 
 # ============================================================================

@@ -76,6 +76,11 @@ class PersistentWebhookHandler:
         webhook_id = str(uuid.uuid4())
         received_at = datetime.utcnow()
 
+        # Extract event info early (before signature verification)
+        # so failed webhooks also get unique event_id
+        event_id = payload.get("id", payload.get("event", ""))
+        event_type = payload.get("event", "")
+
         # Step 1: Verify signature
         if not self.webhook_secret:
             return {
@@ -91,12 +96,12 @@ class PersistentWebhookHandler:
         )
 
         if not signature_valid:
-            # Record failed verification
+            # Record failed verification with actual event_id
             webhook_event = WebhookEventExtended(
                 id=webhook_id,
                 provider="razorpay",
-                event_id="",
-                event_type="",
+                event_id=event_id if event_id else webhook_id,  # Use webhook_id as fallback
+                event_type=event_type,
                 payload=payload,
                 payload_hash=self._hash_payload(raw_body),
                 signature_verified=False,
@@ -113,9 +118,7 @@ class PersistentWebhookHandler:
                 "error": "Invalid signature",
             }
 
-        # Step 2: Extract event info
-        event_id = payload.get("id", payload.get("event"))
-        event_type = payload.get("event")
+        # Step 2: Already extracted event info above
         entity = payload.get("payload", {}).get("payment_link", {}).get("entity", {})
 
         # Step 3: Check idempotency (database query)
