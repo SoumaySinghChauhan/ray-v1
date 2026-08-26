@@ -12,7 +12,7 @@ psycopg2-binary==2.9.12
 alembic==1.13.3
 
 # ML / Data Science
-scikit-learn==1.5.2
+scikit-learn==1.9.0
 pandas==2.2.3
 numpy==2.1.2
 lightgbm==4.5.0
