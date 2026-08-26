@@ -150,6 +150,7 @@ class DatabaseConfig:
 class RazorpayConfig:
     """Razorpay API configuration."""
 
+    mode: str = field(default_factory=lambda: os.getenv("RAZORPAY_MODE", "test"))
     key_id: str = field(default_factory=lambda: os.getenv("RAZORPAY_KEY_ID", ""))
     key_secret: str = field(default_factory=lambda: os.getenv("RAZORPAY_KEY_SECRET", ""))
     webhook_secret: str = field(default_factory=lambda: os.getenv("RAZORPAY_WEBHOOK_SECRET", ""))
@@ -158,6 +159,9 @@ class RazorpayConfig:
         """Validate Razorpay configuration."""
         # In development, keys may be empty
         # In production, all must be set
+        # Mode must be 'test' or 'live'
+        if self.mode not in ("test", "live"):
+            raise ValueError(f"RAZORPAY_MODE must be 'test' or 'live', got: {self.mode}")
         pass
 
 

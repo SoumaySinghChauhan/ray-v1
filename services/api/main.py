@@ -4,6 +4,10 @@ RAY V1 API Server
 FastAPI backend for revenue recovery orchestration.
 """
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -90,6 +94,27 @@ async def get_system_config():
         max_actions_per_day=config.recovery.max_actions_per_day,
         autonomous_amount_limit=str(config.recovery.autonomous_amount_limit),
     )
+
+
+@app.get("/config/verify")
+async def verify_config():
+    """
+    Verify sensitive configuration is loaded without revealing values.
+
+    Returns presence/absence of sensitive config values.
+    NEVER returns actual secret values.
+    """
+    config = get_config()
+
+    return {
+        "razorpay": {
+            "mode": config.razorpay.mode,
+            "key_id_present": bool(config.razorpay.key_id),
+            "key_secret_present": bool(config.razorpay.key_secret),
+            "webhook_secret_present": bool(config.razorpay.webhook_secret),
+        },
+        "dotenv_loaded": True,
+    }
 
 
 # ============================================================================
