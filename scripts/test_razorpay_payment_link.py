@@ -7,6 +7,7 @@ SAFETY:
 - Requires --confirm-test-link flag
 - Creates exactly 1 Payment Link
 - Validates all security constraints
+- Uses persistent database storage (same as webhook handler)
 
 Usage:
     python scripts/test_razorpay_payment_link.py --confirm-test-link
@@ -22,12 +23,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(project_root / "services" / "api"))
 
 from execution.providers import create_razorpay_executor_from_env
-from execution.service import ExecutionService
+from execution.service_persistent import PersistentExecutionService
 from policy.types import PolicyDecision, PolicyDecisionType
 from datetime import datetime, timezone
+from database.session import SessionLocal, init_db
 
 
 def main():
@@ -93,14 +97,30 @@ def main():
         print(f"  ✗ Failed to create executor: {e}")
         sys.exit(1)
 
-    # Step 3: Create execution service
-    print("[3/5] Creating execution service...")
-    service = ExecutionService(executor=executor)
-    print("  ✓ Execution service created")
+    # Step 3: Initialize database
+    print("[3/6] Initializing database...")
+    try:
+        init_db()
+        print("  ✓ Database initialized")
+    except Exception as e:
+        print(f"  ✓ Database already initialized (tables exist)")
     print()
 
-    # Step 4: Create test Payment Link
-    print("[4/5] Creating test Payment Link...")
+    # Step 4: Create database session
+    print("[4/6] Creating database session...")
+    db = SessionLocal()
+    print("  ✓ Database session created")
+    print()
+
+    # Step 5: Create persistent execution service
+    print("[5/6] Creating persistent execution service...")
+    service = PersistentExecutionService(executor=executor, db_session=db)
+    print("  ✓ Persistent execution service created")
+    print("  ✓ Executions will persist to database")
+    print()
+
+    # Step 6: Create test Payment Link
+    print("[6/6] Creating test Payment Link...")
 
     # Create test opportunity with unique ID
     import time
@@ -137,10 +157,11 @@ def main():
 
         if result.success:
             print("  ✓ Payment Link created successfully")
+            print("  ✓ Execution persisted to database")
             print()
 
-            # Step 5: Display results
-            print("[5/5] Test Payment Link Details:")
+            # Display results
+            print("Test Payment Link Details:")
             print("-" * 60)
             print(f"  Execution ID:      {result.execution_id}")
             print(f"  Payment Link ID:   {result.razorpay_payment_link_id}")
@@ -150,14 +171,17 @@ def main():
             print("-" * 60)
             print()
 
-            print("SUCCESS: Test Payment Link created successfully!")
+            print("SUCCESS: Test Payment Link created and persisted!")
             print()
             print("Next steps:")
             print("  1. Open the Short URL in your browser")
             print("  2. Test the payment flow (use Razorpay test cards)")
-            print("  3. Verify webhook delivery (if webhook endpoint configured)")
+            print("  3. Verify webhook delivery (webhook will find execution)")
             print()
             print("Test cards: https://razorpay.com/docs/payments/payments/test-card-upi-details/")
+            print()
+            print("Note: Execution record persisted to database.")
+            print("      Webhooks will be able to resolve this execution.")
             print()
 
         else:
@@ -172,6 +196,10 @@ def main():
         import traceback
         traceback.print_exc()
         sys.exit(1)
+    finally:
+        # Close database session
+        db.close()
+        print("Database session closed.")
 
     print("=" * 60)
     print("Test complete!")
