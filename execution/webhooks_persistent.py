@@ -184,9 +184,11 @@ class PersistentWebhookHandler:
             execution = self.execution_service.get_execution_by_reference_id(reference_id)
 
         if not execution:
-            # Unmatched event
+            # Unmatched event - store payment_link_id and reference_id for debugging
             webhook_event.processing_status = WebhookProcessingStatusEnum.FAILED
             webhook_event.error_message = "Execution not found for Payment Link"
+            webhook_event.razorpay_payment_link_id = payment_link_id
+            webhook_event.reference_id = reference_id
             self.db.commit()
 
             return {

@@ -308,6 +308,83 @@ def test_duplicate_webhook_remains_idempotent(
     assert "already processed" in result2.get("message", "").lower()
 
 
+def test_failed_webhook_stores_payment_link_metadata(db_session):
+    """
+    TEST 6: Failed webhook stores payment_link_id and reference_id for debugging.
+
+    Regression test: When execution is not found, webhook event should still
+    store payment_link_id and reference_id to aid debugging.
+    """
+    from execution.webhooks_persistent import PersistentWebhookHandler
+    from execution.service_persistent import PersistentExecutionService
+    from execution.providers import MockPaymentLinkExecutor
+    from database.models import WebhookEventExtended
+    import json
+    import hmac
+    import hashlib
+
+    # Create service (but don't create any execution)
+    executor = MockPaymentLinkExecutor()
+    service = PersistentExecutionService(executor=executor, db_session=db_session)
+
+    webhook_secret = "test_webhook_secret"
+    payment_link_id = "plink_nonexistent_12345"
+    reference_id = "RAY-nonexistent-12345"
+
+    # Create webhook payload for non-existent execution
+    payload = {
+        "id": "evt_metadata_test_001",
+        "event": "payment_link.paid",
+        "payload": {
+            "payment_link": {
+                "entity": {
+                    "id": payment_link_id,
+                    "reference_id": reference_id,
+                    "status": "paid",
+                }
+            },
+            "payment": {
+                "entity": {
+                    "id": "pay_metadata_test_001",
+                }
+            }
+        },
+    }
+
+    payload_bytes = json.dumps(payload).encode()
+    signature = hmac.new(
+        key=webhook_secret.encode(),
+        msg=payload_bytes,
+        digestmod=hashlib.sha256,
+    ).hexdigest()
+
+    handler = PersistentWebhookHandler(service, webhook_secret, db_session)
+
+    # Process webhook (will fail - execution not found)
+    result = handler.process_webhook(
+        raw_body=payload_bytes,
+        signature=signature,
+        payload=payload,
+    )
+
+    # Verify webhook failed
+    assert result["success"] is False
+    assert "Execution not found" in result["error"]
+
+    # Verify webhook event was created with payment_link_id and reference_id
+    webhook_event = (
+        db_session.query(WebhookEventExtended)
+        .filter(WebhookEventExtended.event_id == "evt_metadata_test_001")
+        .first()
+    )
+
+    assert webhook_event is not None
+    assert webhook_event.razorpay_payment_link_id == payment_link_id
+    assert webhook_event.reference_id == reference_id
+    assert webhook_event.processing_status.value == "FAILED"
+    assert "Execution not found" in webhook_event.error_message
+
+
 def test_in_memory_service_does_not_persist():
     """
     TEST 5: Verify in-memory service does NOT persist (for comparison).
