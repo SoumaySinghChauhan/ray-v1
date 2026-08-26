@@ -5,16 +5,19 @@ import type { Opportunity } from "@/lib/demo";
 import { POLICY_RULES } from "@/lib/demo";
 import { inr, pct } from "@/lib/format";
 import { KV } from "./ui";
+import { StageNode, type StageId, type StageTone } from "./StageIcon";
 
-type StageTone = "neutral" | "recovered" | "pending" | "blocked";
+export type { StageTone };
 
 export interface TraceStage {
-  id: string;
+  id: StageId;
   label: string;
   headline: string;
   sub?: string;
   time?: string;
   tone: StageTone;
+  /** Icon-circle tone, if it should differ from the headline text tone (e.g. the failure alert stays a red icon even though the amount text itself is neutral). */
+  iconTone?: StageTone;
   details?: { k: string; v: string; mono?: boolean }[];
 }
 
@@ -28,6 +31,7 @@ export function deriveStages(o: Opportunity): TraceStage[] {
       sub: o.failureClass.replace(/_/g, " "),
       time: o.time,
       tone: "neutral",
+      iconTone: "blocked",
       details: [
         { k: "Opportunity", v: o.id, mono: true },
         { k: "Customer", v: o.customerId, mono: true },
@@ -210,13 +214,6 @@ const TONE_TEXT: Record<StageTone, string> = {
   blocked: "text-blocked",
 };
 
-const TONE_NODE: Record<StageTone, string> = {
-  neutral: "border-ink-3 bg-canvas",
-  recovered: "border-recovered bg-canvas",
-  pending: "border-pending bg-canvas",
-  blocked: "border-blocked bg-canvas",
-};
-
 function StageRow({
   stage,
   isLast,
@@ -228,23 +225,23 @@ function StageRow({
 }) {
   const [open, setOpen] = useState(false);
   const hasDetails = (stage.details?.length ?? 0) > 0;
+  const iconTone = stage.iconTone ?? stage.tone;
 
   return (
-    <li className={`relative pl-8 ${animate ? "anim-fade-up" : ""}`}>
+    <li className={`relative pl-11 ${animate ? "anim-fade-up" : ""}`}>
       {/* rail node */}
-      <span
-        className={`absolute left-0 top-1 w-2.5 h-2.5 rounded-full border ${TONE_NODE[stage.tone]}`}
-        aria-hidden="true"
-      />
+      <span className="absolute left-0 top-0" aria-hidden="true">
+        <StageNode stage={stage.id} tone={iconTone} size={30} iconSize={14} />
+      </span>
       {/* rail line */}
       {!isLast && (
         <span
-          className={`absolute left-[4.5px] top-4 bottom-[-4px] w-px bg-separator ${animate ? "anim-line" : ""}`}
+          className={`absolute left-[14.5px] top-[34px] bottom-[-6px] w-px bg-separator ${animate ? "anim-line" : ""}`}
           aria-hidden="true"
         />
       )}
 
-      <div className="pb-7">
+      <div className="pb-8 pt-1">
         <div className="flex items-baseline justify-between gap-4">
           <span className="label">{stage.label}</span>
           {stage.time && <span className="mono text-[0.625rem] text-ink-3">{stage.time}</span>}

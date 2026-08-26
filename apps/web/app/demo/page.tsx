@@ -1,11 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Play, ArrowRight, CreditCard, Send, Radio, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { DEMO_SCENARIOS, type DemoScenario } from "@/lib/demo";
 import { inr, pct } from "@/lib/format";
 import { CountUp } from "@/components/CountUp";
 import { PolicyRules } from "@/components/DecisionTrace";
-import { KV, Label, TestModeTag } from "@/components/ui";
+import { StageNode } from "@/components/StageIcon";
+import { Sparkline } from "@/components/charts";
+import { KV, Label } from "@/components/ui";
+
+const END_STEPS = [
+  { icon: Send, label: "PAYMENT LINK SENT", sub: "Customer receives secure link" },
+  { icon: CreditCard, label: "CUSTOMER PAYS", sub: "Completes payment via link" },
+  { icon: Radio, label: "WEBHOOK RECEIVED", sub: "Razorpay sends payment event" },
+  { icon: ShieldCheck, label: "SIGNATURE VERIFIED", sub: "Webhook signature cryptographically verified" },
+  { icon: CheckCircle2, label: "RECOVERY RECORDED", sub: "Amount recorded and attributed" },
+];
 
 /**
  * Guided 30–60s interactive decision story.
@@ -123,18 +134,15 @@ export default function DemoPage() {
 
   return (
     <div className="space-y-10">
-      <header className="flex items-start justify-between gap-6 flex-wrap">
-        <div>
-          <Label>LIVE DECISION DEMO</Label>
-          <h1 className="text-2xl font-medium tracking-tight mt-2">
-            Watch RAY decide
-          </h1>
-          <p className="text-sm text-ink-2 mt-2 max-w-lg">
-            Deterministic synthetic scenarios. Each run walks the full decision
-            rail — diagnosis to verified outcome.
-          </p>
-        </div>
-        <TestModeTag />
+      <header>
+        <Label>LIVE DECISION DEMO</Label>
+        <h1 className="text-2xl font-medium tracking-tight mt-2">
+          Watch RAY decide
+        </h1>
+        <p className="text-sm text-ink-2 mt-2 max-w-lg">
+          Deterministic synthetic scenarios. Each run walks the full decision
+          rail — diagnosis to verified outcome.
+        </p>
       </header>
 
       {/* Scenario selector */}
@@ -156,44 +164,125 @@ export default function DemoPage() {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-10 lg:gap-16">
+      <div className="grid grid-cols-1 lg:grid-cols-[18rem_minmax(0,1fr)_20rem] gap-10">
         {/* ── Scenario card + control ────────────────────────── */}
         <div className="space-y-6">
           <div className="border-t border-separator pt-5">
             <div className="label mb-4">SCENARIO {scenario.index}</div>
-            <div className="label-2 mb-1">FAILED PAYMENT</div>
-            <div className="fin text-4xl font-medium mt-1">{inr(o.amountInr)}</div>
-            <div className="text-xs text-ink-3 mt-2">{o.failureClass.replace(/_/g, " ")}</div>
+            <h2 className="text-lg font-medium tracking-tight">{scenario.title}</h2>
 
-            <div className="border-l border-separator pl-4 mt-6">
-              <KV k="Customer" v={o.customer} />
-              <KV k="Failure" v={o.failureDetail} />
-              <KV k="Time" v={o.time} monoV />
+            <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              <span className="text-ink-3">CUSTOMER</span>
+              <span className="text-ink-3">AMOUNT</span>
+              <span className="text-ink">{o.customer}</span>
+              <span className="fin text-ink">{inr(o.amountInr)}</span>
             </div>
+            <div className="mt-3 text-xs">
+              <span className="text-ink-3 block">FAILURE REASON</span>
+              <span className="text-ink">{o.failureDetail}</span>
+            </div>
+            <div className="mt-2 mono text-[0.625rem] text-ink-3">{o.time} IST</div>
 
-            <p className="text-xs text-ink-2 mt-6 leading-relaxed">{scenario.summary}</p>
+            <div className="mt-6">
+              <div className="label mb-1.5">ABOUT THIS SCENARIO</div>
+              <p className="text-xs text-ink-2 leading-relaxed">{scenario.summary}</p>
+            </div>
 
             <button
               onClick={run}
-              className="t-fast mt-8 w-full sm:w-auto px-8 py-3 bg-ink text-canvas text-xs font-medium tracking-[0.18em] hover:bg-ink-2 active:translate-y-px"
+              className="t-fast mt-8 w-full flex items-center justify-center gap-2 px-8 py-3 bg-ink text-canvas text-xs font-medium tracking-[0.18em] hover:bg-ink-2 active:translate-y-px"
             >
+              <Play size={13} strokeWidth={2} fill="currentColor" />
               {phase === 0 ? "RUN RAY" : "RUN AGAIN"}
             </button>
           </div>
+        </div>
+
+        {/* ── What RAY will decide ─────────────────────────────── */}
+        <div className="space-y-8">
+          <div>
+            <div className="label mb-4">WHAT RAY WILL DECIDE</div>
+            <div className="border border-separator grid grid-cols-2">
+              <div className="p-5">
+                <div className="label mb-2">RECOVERY PROBABILITY</div>
+                <div className="fin text-3xl font-medium text-ink">
+                  {phase >= 2 ? <CountUp value={o.probability} format={(n) => pct(n)} start duration={900} /> : "—"}
+                </div>
+                <div className="text-[0.6875rem] text-ink-3 mt-1 mb-3">Model estimate</div>
+                <Sparkline points={[0.2, 0.32, 0.28, 0.41, 0.5, o.probability]} tone="muted" />
+              </div>
+              <div className="p-5 border-l border-separator">
+                <div className="label mb-2">INCREMENTAL VALUE</div>
+                <div className="fin text-3xl font-medium text-ink">
+                  {phase >= 3 ? <CountUp value={o.incrementalEv} format={(n) => inr(n, { sign: true })} start duration={800} /> : "—"}
+                </div>
+                <div className="text-[0.6875rem] text-ink-3 mt-1 mb-3">Expected uplift</div>
+                <Sparkline points={[0, o.incrementalEv * 0.3, o.incrementalEv * 0.55, o.incrementalEv * 0.8, o.incrementalEv]} tone={o.incrementalEv > 0 ? "recovered" : "blocked"} />
+              </div>
+            </div>
+
+            <div className="border border-separator border-t-0 p-5 flex items-center justify-between gap-6 flex-wrap">
+              <div>
+                <div className="label mb-1.5">RECOMMENDED ACTION</div>
+                <div className="text-sm font-medium text-ink">
+                  {o.action === "CREATE_PAYMENT_LINK" ? "PAYMENT LINK" : "DO NOTHING"}
+                </div>
+                <div className="text-[0.6875rem] text-ink-3 mt-0.5">
+                  {o.action === "CREATE_PAYMENT_LINK" ? "Best incremental EV" : o.actionReason}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="label mb-1.5">POLICY EXPECTATION</div>
+                <div className={`text-sm font-medium ${isBlock ? "text-blocked" : "text-ink"}`}>
+                  {isSkip ? "NOT EVALUATED" : isBlock ? "BLOCK" : "ALLOW"}
+                </div>
+                <div className="text-[0.6875rem] text-ink-3 mt-0.5">
+                  {isSkip ? "no execution needed" : isBlock ? "1 rule failed" : "7 / 7 rules passed"}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {!isSkip && (
+            <div>
+              <div className="label mb-4">HOW THIS SCENARIO ENDS</div>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {(isBlock ? END_STEPS.slice(0, 1) : END_STEPS).map((s, i, arr) => (
+                  <div key={s.label} className="relative border border-separator p-3.5">
+                    <s.icon size={16} strokeWidth={1.75} className="text-ink-3 mb-3" />
+                    <div className="label leading-snug">{s.label}</div>
+                    <div className="text-[0.625rem] text-ink-3 mt-1 leading-snug">{s.sub}</div>
+                    {i < arr.length - 1 && (
+                      <ArrowRight size={12} strokeWidth={1.75} className="hidden sm:block absolute -right-[1.55rem] top-1/2 -translate-y-1/2 text-ink-3" />
+                    )}
+                  </div>
+                ))}
+              </div>
+              {isBlock && (
+                <p className="text-xs text-ink-3 mt-3">
+                  Policy authorization fails before execution — nothing downstream ever runs.
+                </p>
+              )}
+            </div>
+          )}
+
+          <p className="text-[0.6875rem] text-ink-3 border-t border-separator pt-4">
+            All scenarios are deterministic and use synthetic data. No live payments are executed.
+          </p>
         </div>
 
         {/* ── Animated decision rail ─────────────────────────── */}
         <div className="min-h-[28rem]">
           <div className="label mb-6">DECISION RAIL</div>
           <ol className="list-none space-y-0">
-            <Stage active label="FAILED PAYMENT" time={o.time}>
+            <Stage stage="failed" active label="FAILED PAYMENT" time={o.time} iconTone="blocked">
               <span className="fin text-lg font-medium">{inr(o.amountInr)}</span>
               <span className="text-xs text-ink-3 block">
                 {o.failureClass.replace(/_/g, " ").toLowerCase()}
               </span>
             </Stage>
 
-            <Stage active={phase >= 1} label="DIAGNOSIS">
+            <Stage stage="diagnosis" active={phase >= 1} label="DIAGNOSIS">
               {o.diagnosis && (
                 <>
                   <span className="fin text-lg font-medium">
@@ -206,14 +295,14 @@ export default function DemoPage() {
               )}
             </Stage>
 
-            <Stage active={phase >= 2} label="PREDICTION">
+            <Stage stage="prediction" active={phase >= 2} label="PREDICTION">
               <span className="fin text-lg font-medium">
                 <CountUp value={o.probability} format={(n) => pct(n)} start={phase >= 2} duration={900} />
               </span>
               <span className="text-xs text-ink-3 block">P(recovery) · model estimate</span>
             </Stage>
 
-            <Stage active={phase >= 3} label="ECONOMIC VALUE">
+            <Stage stage="value" active={phase >= 3} label="ECONOMIC VALUE">
               <div className="grid grid-cols-2 gap-x-8 gap-y-2">
                 <div>
                   <span className="label block">EXPECTED RECOVERY</span>
@@ -235,7 +324,7 @@ export default function DemoPage() {
               </div>
             </Stage>
 
-            <Stage active={phase >= 4} label="OPTIMIZER" isLast={isSkip}>
+            <Stage stage="optimizer" active={phase >= 4} label="OPTIMIZER" isLast={isSkip}>
               <span className="fin text-lg font-medium">
                 {o.action === "CREATE_PAYMENT_LINK" ? "PAYMENT LINK" : "DO NOTHING"}
               </span>
@@ -254,9 +343,11 @@ export default function DemoPage() {
 
             {!isSkip && (
               <Stage
+                stage="policy"
                 active={phase >= 5}
                 label="POLICY"
                 tone={phase >= 6 && isBlock ? "blocked" : "neutral"}
+                iconTone={phase >= 6 && isBlock ? "blocked" : "neutral"}
                 isLast={isBlock}
               >
                 <div className="max-w-sm">
@@ -288,7 +379,7 @@ export default function DemoPage() {
 
             {!isSkip && !isBlock && (
               <>
-                <Stage active={phase >= 7} label="EXECUTION">
+                <Stage stage="execution" active={phase >= 7} label="EXECUTION">
                   <div className="flex items-center gap-3 text-xs tracking-[0.14em] font-medium">
                     <span className={execState >= 0 && phase >= 7 ? "text-ink" : "text-ink-3"}>PENDING</span>
                     <span className="w-6 h-px bg-separator" />
@@ -306,9 +397,11 @@ export default function DemoPage() {
                 </Stage>
 
                 <Stage
+                  stage="webhook"
                   active={phase >= 8}
                   label={phase >= 9 ? "WEBHOOK" : "AWAITING PAYMENT"}
                   tone={phase === 8 ? "pending" : "neutral"}
+                  iconTone={phase === 8 ? "pending" : "neutral"}
                 >
                   {phase === 8 && (
                     <div className="anim-fade-up">
@@ -348,7 +441,7 @@ export default function DemoPage() {
                   )}
                 </Stage>
 
-                <Stage active={phase >= 10} label="RECOVERED" tone="recovered" isLast>
+                <Stage stage="outcome" active={phase >= 10} label="RECOVERED" tone="recovered" iconTone="recovered" isLast>
                   {phase >= 10 && (
                     <div className="anim-confirm inline-block pr-6">
                       <span className="fin text-3xl font-medium text-recovered">
@@ -373,41 +466,33 @@ export default function DemoPage() {
 }
 
 function Stage({
+  stage,
   active,
   label,
   time,
   tone = "neutral",
+  iconTone,
   isLast = false,
   children,
 }: {
+  stage: import("@/components/StageIcon").StageId;
   active: boolean;
   label: string;
   time?: string;
   tone?: "neutral" | "recovered" | "pending" | "blocked";
+  iconTone?: "neutral" | "recovered" | "pending" | "blocked";
   isLast?: boolean;
   children: React.ReactNode;
 }) {
-  const nodeCls =
-    tone === "recovered"
-      ? "border-recovered"
-      : tone === "pending"
-        ? "border-pending"
-        : tone === "blocked"
-          ? "border-blocked"
-          : active
-            ? "border-ink-2"
-            : "border-separator";
-
   return (
-    <li className={`relative pl-8 t-slow ${active ? "opacity-100" : "opacity-30"}`}>
-      <span
-        className={`absolute left-0 top-1 w-2.5 h-2.5 rounded-full border bg-canvas t-med ${nodeCls}`}
-        aria-hidden="true"
-      />
+    <li className={`relative pl-11 t-slow ${active ? "opacity-100" : "opacity-30"}`}>
+      <span className="absolute left-0 top-0" aria-hidden="true">
+        <StageNode stage={stage} tone={iconTone ?? (active ? tone : "neutral")} size={30} iconSize={14} />
+      </span>
       {!isLast && (
-        <span className="absolute left-[4.5px] top-4 bottom-0 w-px bg-separator" aria-hidden="true" />
+        <span className="absolute left-[14.5px] top-[34px] bottom-[-6px] w-px bg-separator" aria-hidden="true" />
       )}
-      <div className="pb-8">
+      <div className="pb-8 pt-1">
         <div className="flex items-baseline justify-between gap-4">
           <span className="label">{label}</span>
           {time && <span className="mono text-[0.625rem] text-ink-3">{time}</span>}

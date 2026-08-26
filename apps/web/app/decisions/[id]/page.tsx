@@ -35,7 +35,7 @@ export default async function DecisionDetailPage(props: PageProps<"/decisions/[i
         </Link>
       </header>
 
-      <div className="grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-10 lg:gap-14">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-10 lg:gap-14">
         <Section title="DECISION TRACE">
           <div className="max-w-lg">
             <DecisionTrace opportunity={o} />

@@ -40,7 +40,7 @@ export default async function OpportunityDetailPage(
         </div>
       </header>
 
-      <div className="grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-10 lg:gap-14">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-10 lg:gap-14">
         {/* ── LEFT: observable facts ─────────────────────────── */}
         <div className="space-y-8">
           <Section title="PAYMENT">

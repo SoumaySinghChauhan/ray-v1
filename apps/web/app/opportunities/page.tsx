@@ -5,6 +5,9 @@ import Link from "next/link";
 import { OPPORTUNITIES, type Opportunity, type Outcome } from "@/lib/demo";
 import { inr, pct } from "@/lib/format";
 import { OutcomeBadge, PolicyBadge, Label } from "@/components/ui";
+import { ProgressBar } from "@/components/charts";
+import { TODAY } from "@/lib/demo";
+import { num } from "@/lib/format";
 
 type SortKey = "amount" | "probability" | "ev" | "time";
 
@@ -62,6 +65,22 @@ export default function OpportunitiesPage() {
         </p>
       </header>
 
+      {/* KPI strip */}
+      <div className="border border-separator grid grid-cols-2 md:grid-cols-5">
+        {[
+          { label: "ACTIVE", value: num(TODAY.opportunities), tone: "text-recovered" },
+          { label: "ACTIONS SELECTED", value: num(TODAY.actionsSelected) },
+          { label: "PREDICTED NET EV", value: inr(TODAY.predictedNetEv) },
+          { label: "POLICY BLOCKS TODAY", value: num(TODAY.policyBlocks), tone: "text-blocked" },
+          { label: "CAPACITY", value: `${TODAY.capacityUsed} / ${TODAY.capacityTotal}` },
+        ].map((it, i) => (
+          <div key={it.label} className={`p-5 ${i > 0 ? "border-t md:border-t-0 md:border-l border-separator" : ""}`}>
+            <div className={`fin text-2xl font-medium ${it.tone ?? "text-ink"}`}>{it.value}</div>
+            <div className="label mt-2">{it.label}</div>
+          </div>
+        ))}
+      </div>
+
       {/* Filters */}
       <div className="flex flex-wrap gap-x-8 gap-y-4">
         <FilterGroup
@@ -92,6 +111,7 @@ export default function OpportunitiesPage() {
               <Th sortable active={sortKey === "probability"} desc={sortDesc} onClick={() => toggleSort("probability")}>
                 P(RECOVERY)
               </Th>
+              <Th>EXPECTED RECOVERY</Th>
               <Th sortable active={sortKey === "ev"} desc={sortDesc} onClick={() => toggleSort("ev")}>
                 INCR. EV
               </Th>
@@ -131,10 +151,16 @@ export default function OpportunitiesPage() {
                   </span>
                 </Td>
                 <Td>
-                  <span className="fin text-xs text-ink-2">{pct(o.probability)}</span>
+                  <div className="flex items-center gap-2">
+                    <ProgressBar value={o.probability} width={56} />
+                    <span className="fin text-xs text-ink-2">{pct(o.probability)}</span>
+                  </div>
                 </Td>
                 <Td>
-                  <span className={`fin text-xs ${o.incrementalEv > 0 ? "text-ink" : "text-ink-3"}`}>
+                  <span className="fin text-xs text-ink-2">{inr(o.grossEv)}</span>
+                </Td>
+                <Td>
+                  <span className={`fin text-xs ${o.incrementalEv > 0 ? "text-recovered" : "text-ink-3"}`}>
                     {inr(o.incrementalEv, { sign: true })}
                   </span>
                 </Td>

@@ -22,6 +22,7 @@
   --recovered: #35c759;     /* restrained emerald — verified recovery */
   --pending: #f5b942;       /* restrained amber — awaiting */
   --blocked: #ff453a;       /* restrained red — blocked / failure */
+  --test-mode: #5a83c3;     /* muted steel blue — environment/safety indicator ONLY */
 
   --background: var(--canvas);
   --foreground: var(--ink);
@@ -39,6 +40,7 @@
   --color-recovered: var(--recovered);
   --color-pending: var(--pending);
   --color-blocked: var(--blocked);
+  --color-test-mode: var(--test-mode);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);

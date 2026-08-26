@@ -2,6 +2,11 @@
 
 **Frontend**: Next.js App Router (`apps/web/`)
 **Status**: Production build passing · lint clean · backend untouched
+**Icons**: `lucide-react` — one consistent thin-line icon system throughout
+**Brand assets**: `Ray_Images/Logo.png` (wordmark) and `Ray_Images/Favicon.png`
+(mark) are the source files; processed copies live in `apps/web/app/icon.png`,
+`apps/web/app/apple-icon.png` (Next.js auto-favicon convention) and
+`apps/web/public/brand/`.
 
 ---
 
@@ -28,16 +33,32 @@ Architectural message repeated across the product:
 
 | Route | Purpose |
 |---|---|
-| `/` | Executive overview — hero, KPI strip, decision activity, executions, policy blocks, recovery composition |
-| `/opportunities` | Premium data table — sort, filter, keyboard-focusable |
-| `/opportunities/[id]` | Split decision terminal — observable facts left, RAY decision right, full trace below |
-| `/decisions` | Decision log |
+| `/` | Command center — horizontal icon Decision Rail, KPI strip with sparklines, decision activity / recent executions / policy blocks, recovery composition bar |
+| `/opportunities` | Premium data table — KPI strip, filters, progress-bar probability column, sort |
+| `/opportunities/[id]` | Split decision terminal — observable facts left, RAY decision right, full icon trace below |
+| `/decisions` | Decision log — KPI strip, filter tabs, click a row to open the slide-over trace panel |
 | `/decisions/[id]` | Decision Trace focus view + policy evaluation + provenance |
-| `/execution` | Execution ledger (Razorpay Test Mode) |
+| `/execution` | Execution ledger — KPI strip with sparklines, execution flow state machine, execution-outcomes donut, Test Mode guardrails |
 | `/execution/[id]` | Execution + recovery state machines with identifiers |
-| `/audit` | Forensic audit — expandable identity + provenance per record |
+| `/audit` | Forensic three-column audit — record list, icon trace detail, provenance/links/checksums/notes |
 | `/evaluation` | Frozen V1 benchmark presentation (display-only) |
-| `/demo` | Guided 30–60s interactive decision story (hackathon hero) |
+| `/demo` | Guided 30–60s interactive decision story — scenario picker, "what RAY will decide", icon Decision Rail |
+
+### Signature components
+
+- **`DecisionPanel`** (`components/DecisionPanel.tsx`) — the slide-over used
+  from `/decisions`: TRACE / POLICY (7) / PROVENANCE tabs over the same icon
+  trace used everywhere else.
+- **`StageNode` / `StageIcon.tsx`** — the one icon-node system shared by the
+  Overview hero rail, the mini Decision Rail, `DecisionTrace`, the Demo rail,
+  and the Audit trace. Nine stage icons (failed → diagnosis → prediction →
+  value → optimizer → policy → execution → webhook → outcome); the failed-payment
+  icon is always rendered in the blocked-red tone as an alert signal
+  independent of the eventual outcome — the headline text next to it stays
+  neutral.
+- **`charts.tsx`** — hand-rolled SVG primitives (`Sparkline`, `ProgressBar`,
+  `Donut`, `ComparisonBars`). No charting library; the data is small, real,
+  and mostly frozen, so a dependency wasn't warranted.
 
 ---
 
@@ -58,6 +79,12 @@ Architectural message repeated across the product:
 | `--recovered` | `#35C759` | Verified recovery only |
 | `--pending` | `#F5B942` | Awaiting states only |
 | `--blocked` | `#FF453A` | Blocks and failures only |
+| `--test-mode` | `#5A83C3` | Environment/safety indicator only — the sidebar's `ENVIRONMENT` value, nowhere else |
+
+The `--test-mode` steel blue is a deliberate, singular exception to the
+monochrome-plus-operational-semantics rule: it exists solely to make the
+environment/safety indicator legible and distinct from ordinary muted text —
+it never appears on financial data, charts, or decorative elements.
 
 Rules enforced in components:
 
@@ -150,6 +177,12 @@ Every blocked scenario explains *why* inline. Expected demo duration:
   display narration only; the backend remains authoritative and no optimizer,
   policy, ML, or Razorpay logic is duplicated in the frontend.
 - Policy rule names match `policy/types.py::RuleId` exactly.
+- The Execution page's "Execution Outcomes" donut shows RECOVERED / PENDING /
+  NOT RECOVERED — not a multi-channel breakdown. The backend's
+  `action_registry.py` registers exactly one action type
+  (`CREATE_PAYMENT_LINK`); a "Payment Link / UPI Intent / Card Retry" channel
+  mix would misrepresent a capability the system doesn't have, so the donut
+  was scoped to what's real instead.
 
 ### Test Mode safety
 
@@ -184,17 +217,27 @@ apps/web/
 ├── app/
 │   ├── layout.tsx          # root layout + fonts + Shell
 │   ├── globals.css         # design tokens + motion system
+│   ├── icon.png            # app favicon (from Ray_Images/Favicon.png)
+│   ├── apple-icon.png       # apple touch icon
 │   ├── page.tsx            # Overview
 │   ├── opportunities/      # table + [id] detail
 │   ├── decisions/          # log + [id] trace view
 │   ├── execution/          # ledger + [id] state machines
 │   ├── audit/, evaluation/, demo/
 ├── components/
-│   ├── Shell.tsx           # left rail nav, system status, RAY mark
-│   ├── DecisionTrace.tsx   # signature trace rail + PolicyRules
+│   ├── Shell.tsx           # grouped nav w/ icons, breadcrumb top bar, IST clock
+│   ├── DecisionTrace.tsx   # signature icon trace rail + PolicyRules
+│   ├── DecisionPanel.tsx   # slide-over trace panel (Decisions list)
+│   ├── StageIcon.tsx       # StageNode — the one icon-node system, reused everywhere
+│   ├── charts.tsx          # Sparkline, ProgressBar, Donut, ComparisonBars (hand-rolled SVG)
 │   ├── CountUp.tsx         # rAF number resolution, reduced-motion aware
 │   ├── LiveFeed.tsx        # operational activity feed
 │   └── ui.tsx              # Label, Section, Figure, KV, badges, TestModeTag
+├── public/brand/
+│   ├── ray-mark.png        # sidebar icon (from Favicon.png)
+│   └── ray-logo-lockup.png # full wordmark lockup (from Logo.png)
+├── public/evaluation/
+│   └── final-test-calibration.png  # frozen calibration chart, copied verbatim
 └── lib/
     ├── demo.ts             # deterministic synthetic operational data
     ├── benchmark.ts        # frozen V1 benchmark (verbatim transcription)
@@ -202,8 +245,12 @@ apps/web/
     └── format.ts           # INR (Indian grouping), percent, number
 ```
 
-Brand: minimal geometric mark (three converging recovery rays, monochrome)
-plus a tracked `RAY` wordmark.
+Brand: the supplied RAY mark (`Ray_Images/Favicon.png`) is used directly as
+the sidebar icon and the app favicon/apple-touch-icon — not redrawn. The full
+glow wordmark lockup (`Ray_Images/Logo.png`) is kept in `public/brand/` for
+future large-format brand placements; the sidebar itself pairs the small mark
+with the app's own tracked `RAY` / `REVENUE RECOVERY ORCHESTRATOR` type
+treatment, matching the reference sidebar exactly.
 
 ---
 
