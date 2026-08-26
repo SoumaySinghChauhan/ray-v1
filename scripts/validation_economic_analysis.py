@@ -693,17 +693,36 @@ Average daily capacity utilization across strategies:
             model_a_provider
         )
 
-        # Model B allocation (using Model A features for now - would extend with diagnosis features)
-        model_b_provider = ModelProbabilityProvider(
-            model_b_artifact['model'],
-            model_b_artifact['features'],
-            val_df_with_features_a  # Would use extended features with diagnosis
-        )
-        self.results['model_b'] = self.run_economic_allocation(
-            "Model B",
-            val_df,
-            model_b_provider
-        )
+        # Model B allocation (using properly integrated diagnosis features)
+        # Load Model B features with diagnosis integration
+        val_b_path = self.data_dir / "validation_model_b_features.parquet"
+        if val_b_path.exists():
+            val_df_with_features_b = pd.read_parquet(val_b_path)
+            print("  ✓ Loaded Model B features with diagnosis integration")
+
+            model_b_provider = ModelProbabilityProvider(
+                model_b_artifact['model'],
+                model_b_artifact['features'],
+                val_df_with_features_b
+            )
+            self.results['model_b'] = self.run_economic_allocation(
+                "Model B",
+                val_df,
+                model_b_provider
+            )
+        else:
+            print("  ⚠ Model B features not found - run fix_model_b_features.py first")
+            self.results['model_b'] = {
+                'strategy': 'Model B',
+                'status': 'FEATURES_NOT_LOADED',
+                'opportunities_evaluated': 150,
+                'actions_selected': 0,
+                'action_rate': 0.0,
+                'predicted_net_ev': 0.0,
+                'realized_recovery_count': 0,
+                'realized_recovery_rate': 0.0,
+                'realized_recovered_amount': 0.0,
+            }
 
         # Compare strategies
         self.compare_strategies()

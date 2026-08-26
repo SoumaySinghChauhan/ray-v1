@@ -41,11 +41,11 @@ This report presents the economic validation of RAY's decision architecture on t
 - Realized Amount: 74162.60 INR
 
 ### Model B
-- Actions Selected: 0
-- Action Rate: 0.0%
-- Predicted Net EV: 0.00 INR
-- Realized Recovery: 0 / 0 (0.0%)
-- Realized Amount: 0.00 INR
+- Actions Selected: 99
+- Action Rate: 66.0%
+- Predicted Net EV: 80224.69 INR
+- Realized Recovery: 25 / 99 (25.3%)
+- Realized Amount: 74162.60 INR
 
 ---
 
@@ -56,12 +56,12 @@ This report presents the economic validation of RAY's decision architecture on t
 - Realized Amount Delta: +2.76 INR
 
 ### Model B vs Baseline
-- Predicted Net EV Delta: -141537.09 INR
-- Realized Amount Delta: -74159.84 INR
+- Predicted Net EV Delta: -61312.40 INR
+- Realized Amount Delta: +2.76 INR
 
 ### Model B vs Model A
-- Predicted Net EV Delta: -80621.73 INR
-- Realized Amount Delta: -74162.60 INR
+- Predicted Net EV Delta: -397.04 INR
+- Realized Amount Delta: +0.00 INR
 
 ---
 
@@ -78,7 +78,7 @@ The LLM diagnosis features show negative economic value in validation allocation
 Average daily capacity utilization across strategies:
 - Baseline: 99.0%
 - Model A: 99.0%
-- Model B: 0.0%
+- Model B: 99.0%
 
 ---
 
@@ -99,4 +99,4 @@ Average daily capacity utilization across strategies:
 
 ---
 
-**Generated**: 2026-08-26T22:43:25.756252
+**Generated**: 2026-08-26T22:48:27.609943
