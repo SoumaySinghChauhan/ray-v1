@@ -8,6 +8,20 @@ FastAPI backend for revenue recovery orchestration.
 from dotenv import load_dotenv
 load_dotenv()
 
+# Setup Python path for imports
+from pathlib import Path
+import sys
+
+_file_path = Path(__file__).resolve()
+_project_root = _file_path.parent.parent.parent  # Ray root
+_api_root = _file_path.parent  # services/api
+
+# Add to path if not already present
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+if str(_api_root) not in sys.path:
+    sys.path.insert(0, str(_api_root))
+
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -129,10 +143,8 @@ async def razorpay_webhook(request: Request):
     SECURITY: Verifies signature BEFORE parsing JSON.
     Uses persistent database-backed services for restart safety.
     """
-    import sys
     import os
     import json
-    sys.path.insert(0, '/Users/soumaysinghchauhan/Ray')
 
     # Step 1: Get raw body BEFORE any parsing
     raw_body = await request.body()

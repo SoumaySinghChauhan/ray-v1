@@ -6,10 +6,20 @@ Database-backed webhook processing that survives process restarts.
 
 import hashlib
 import uuid
+import sys
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+
+# Setup path for database imports
+_file_path = Path(__file__).resolve()
+_project_root = _file_path.parent.parent  # Ray root
+_api_root = _project_root / "services" / "api"
+
+if str(_api_root) not in sys.path:
+    sys.path.insert(0, str(_api_root))
 
 from execution.providers import verify_webhook_signature
 from execution.service_persistent import PersistentExecutionService
@@ -18,10 +28,7 @@ from execution.types import (
     OpportunityState,
 )
 
-
 # Import database models
-import sys
-sys.path.insert(0, '/Users/soumaysinghchauhan/Ray/services/api')
 from database.models import (
     WebhookEventExtended,
     RecoveryOutcomeExtended,
