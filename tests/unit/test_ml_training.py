@@ -339,3 +339,109 @@ def test_model_artifacts_are_not_empty(model_dir):
     assert model_a_path.stat().st_size > 100, "Model A artifact is too small (likely empty)"
     assert model_b_path.stat().st_size > 100, "Model B artifact is too small (likely empty)"
     assert baseline_path.stat().st_size > 100, "Baseline artifact is too small (likely empty)"
+
+
+def test_model_b_feature_integration(model_dir):
+    """Test that Model B diagnosis features can be loaded and integrated correctly."""
+    from pathlib import Path
+
+    # Load Model B
+    model_b_path = model_dir / "model_b_calibrated.pkl"
+    with open(model_b_path, 'rb') as f:
+        artifact = pickle.load(f)
+
+    expected_features = artifact['features']
+
+    # Verify Model B has more features than Model A (includes diagnosis)
+    model_a_path = model_dir / "model_a_calibrated.pkl"
+    with open(model_a_path, 'rb') as f:
+        model_a_artifact = pickle.load(f)
+
+    assert len(expected_features) > len(model_a_artifact['features']), \
+        "Model B should have more features than Model A (diagnosis features)"
+
+    # Verify diagnosis features are present
+    diagnosis_features = [f for f in expected_features if 'diagnostic_class' in f or 'diagnosis_missing' in f or f == 'confidence']
+    assert len(diagnosis_features) > 0, "Model B should have diagnosis-related features"
+
+    # Verify feature count is 29
+    assert len(expected_features) == 29, f"Model B should have 29 features, got {len(expected_features)}"
+
+
+def test_model_b_validation_features_exist():
+    """Test that Model B validation features file exists."""
+    val_b_path = Path('datasets/v1.0.0/ml/validation_model_b_features.parquet')
+    assert val_b_path.exists(), f"Model B validation features not found at {val_b_path}"
+
+
+def test_model_b_validation_features_can_be_loaded():
+    """Test that Model B validation features can be loaded."""
+    val_b_path = Path('datasets/v1.0.0/ml/validation_model_b_features.parquet')
+    val_b_df = pd.read_parquet(val_b_path)
+
+    # Should have 150 validation samples
+    assert len(val_b_df) == 150, f"Expected 150 validation samples, got {len(val_b_df)}"
+
+    # Should have Model B probability column
+    assert 'model_b_probability' in val_b_df.columns, "Missing model_b_probability column"
+
+
+def test_model_b_produces_valid_probabilities_on_validation(model_dir):
+    """Test that Model B produces valid probabilities on validation set with diagnosis features."""
+    model_path = model_dir / "model_b_calibrated.pkl"
+
+    with open(model_path, 'rb') as f:
+        artifact = pickle.load(f)
+
+    model = artifact['model']
+    features = artifact['features']
+
+    # Load Model B features
+    val_b_path = Path('datasets/v1.0.0/ml/validation_model_b_features.parquet')
+    val_b_df = pd.read_parquet(val_b_path)
+
+    # Extract features
+    X_val = val_b_df[features]
+
+    # Predict
+    proba = model.predict_proba(X_val)[:, 1]
+
+    # Validate
+    assert len(proba) == 150, "Expected 150 predictions"
+    assert (proba >= 0).all(), "Probabilities must be >= 0"
+    assert (proba <= 1).all(), "Probabilities must be <= 1"
+    assert not np.isnan(proba).any(), "Probabilities contain NaN"
+    assert not np.isinf(proba).any(), "Probabilities contain Inf"
+
+
+def test_validation_economic_analysis_artifacts_exist():
+    """Test that validation economic analysis artifacts exist."""
+    json_path = Path('reports/validation-economic-analysis-v1.0.json')
+    md_path = Path('reports/validation-economic-analysis-v1.0.md')
+    csv_path = Path('reports/validation-model-comparison.csv')
+
+    assert json_path.exists(), f"JSON report not found at {json_path}"
+    assert md_path.exists(), f"Markdown report not found at {md_path}"
+    assert csv_path.exists(), f"CSV comparison not found at {csv_path}"
+
+
+def test_validation_economic_analysis_completeness():
+    """Test that validation economic analysis includes all three strategies."""
+    import json
+
+    json_path = Path('reports/validation-economic-analysis-v1.0.json')
+    with open(json_path, 'r') as f:
+        report = json.load(f)
+
+    # Check all strategies present
+    assert 'baseline' in report, "Missing baseline results"
+    assert 'model_a' in report, "Missing Model A results"
+    assert 'model_b' in report, "Missing Model B results"
+
+    # Check Model B has positive actions (not 0 like in failed Prompt 7D)
+    model_b_actions = report['model_b']['actions_selected']
+    assert model_b_actions > 0, "Model B selected 0 actions - diagnosis features not loaded correctly"
+
+    # Check comparison exists
+    assert 'comparison' in report, "Missing comparison section"
+    assert 'llm_contribution' in report['comparison'], "Missing LLM contribution analysis"

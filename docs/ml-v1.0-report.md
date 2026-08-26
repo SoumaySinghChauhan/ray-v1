@@ -225,13 +225,50 @@ Model A features **PLUS**:
 
 ---
 
-## 8. Economic Comparison
+## 8. Economic Validation (Prompt 7D/7E)
 
-**NOT IMPLEMENTED IN THIS REPORT**
+### Economic Allocation Results
 
-Economic evaluation on validation set (comparing expected recovery value, net value, actions selected, capacity behavior) was not completed due to time constraints.
+| Strategy | Actions | Action Rate | Predicted Net EV | Realized Recovery | Realized Amount |
+|----------|---------|-------------|------------------|-------------------|-----------------|
+| Baseline | 99      | 66.0%       | 141,537 INR      | 25/99 (25.3%)     | 74,160 INR      |
+| Model A  | 99      | 66.0%       | 80,622 INR       | 25/99 (25.3%)     | 74,163 INR      |
+| Model B  | 99      | 66.0%       | 80,225 INR       | 25/99 (25.3%)     | 74,163 INR      |
 
-**Recommendation**: Implement economic validation as part of Prompt 7D or test evaluation (Prompt 8).
+**Economic Parameters**:
+- Daily capacity: 10 actions/day
+- Assumed organic recovery: 4%
+- Friction cost: 5 INR/contact
+- Intervention cost: 0 INR
+
+### Economic Deltas
+
+**Model A vs Baseline**:
+- Predicted Net EV: -60,915 INR
+- Realized Amount: +3 INR
+
+**Model B vs Baseline**:
+- Predicted Net EV: -61,312 INR
+- Realized Amount: +3 INR
+
+**Model B vs Model A**:
+- Predicted Net EV: -397 INR (0.5% worse)
+- Realized Amount: +0 INR (identical)
+
+### LLM Economic Contribution
+
+**Classification**: **NEGATIVE** (marginal)
+
+The LLM diagnosis features show **negative economic value** in validation allocation:
+- Model B's predicted EV is 397 INR worse than Model A
+- Realized recovery outcomes are identical (25/99 recoveries)
+- Same opportunities selected (99/150)
+- Same capacity utilization (99%)
+
+**Interpretation**:
+While diagnosis features marginally improved Brier score (0.0009), this did not translate to better economic decisions. The slightly different probability estimates led to marginally worse expected value predictions, though actual recovery outcomes were identical.
+
+**Conclusion**: For this validation set, Model A (observable features only) is economically equivalent to Model B, with simpler implementation and no LLM dependency.
 
 ---
 
@@ -248,27 +285,37 @@ Economic evaluation on validation set (comparing expected recovery value, net va
 
 ### LLM Diagnosis Contribution
 
-**Conclusion**: **LLM diagnosis adds MARGINAL VALUE**
+**Conclusion**: **LLM diagnosis adds MARGINAL to NEGATIVE VALUE**
 
-**Evidence**:
+**Predictive Metrics**:
 - Brier score improvement: 0.0009 (-0.6%)
-- ROC-AUC: Identical to Model A
+- ROC-AUC: Identical to Model A (0.6861)
 - PR-AUC: Small improvement (+2.3%)
 - Log Loss: Small improvement (-0.3%)
 
-**Interpretation**:
-The LLM diagnosis features (`diagnostic_class`, `confidence`, `diagnosis_missing`) provide a small improvement in probability calibration (Brier score) but do not meaningfully improve ranking quality (ROC-AUC). The marginal value may be due to:
+**Economic Metrics** (Prompt 7D/7E validation):
+- Predicted Net EV: -397 INR worse than Model A
+- Realized Recovery: Identical to Model A (25/99)
+- Actions Selected: Identical to Model A (99/150)
+- Economic Classification: NEGATIVE
 
+**Interpretation**:
+The LLM diagnosis features (`diagnostic_class`, `confidence`, `diagnosis_missing`) provide a tiny improvement in probability calibration (Brier) but:
+1. Do not improve ranking quality (ROC-AUC identical)
+2. Do not improve economic decision-making (worse predicted EV, same realized outcomes)
+3. Add implementation complexity and LLM dependency
+
+**Root Causes**:
 1. **Limited diagnosis signal**: Local LLM (qwen3:4b-instruct) may not extract strong predictive signal
-2. **Redundancy**: Diagnosis features may largely duplicate observable features
+2. **Redundancy**: Diagnosis features may largely duplicate observable features (payment method, failure class)
 3. **Small sample size**: Validation set (150 samples) may be too small to detect modest improvements
 4. **Diagnosis failures**: 3.3% of validation cases had missing diagnoses, reducing potential value
+5. **Feature overlap**: Diagnostic classes often align with failure classes already in Model A
 
-**Recommendation**: LLM diagnosis shows promise but would benefit from:
-- Larger LLM model (if feasible)
-- More training examples with diagnoses
-- Feature engineering on reason codes (not implemented)
-- Ensemble approaches
+**Recommendation**: 
+- **For production**: Use Model A (simpler, no LLM dependency, equivalent economic value)
+- **For research**: Test with larger LLM, more data, or better feature engineering
+- **Test evaluation** (Prompt 8): Validate findings on larger test set (300 samples)
 
 ---
 
@@ -419,9 +466,9 @@ This report validates the **decision architecture and ML pipeline** of the RAY s
 1. ✅ Train models on TRAIN/VALIDATION
 2. ✅ Calibrate models
 3. ✅ Compare against baseline
-4. ⬜ Implement economic validation
-5. ⬜ Generate feature importance
-6. ⬜ Optimize decision threshold
+4. ✅ Implement economic validation (Prompt 7D/7E)
+5. ✅ Generate feature importance
+6. ⬜ Optimize decision threshold (deferred to test evaluation)
 
 ### Test Evaluation (Prompt 8)
 1. Load frozen models (Model A, Model B, Baseline)
