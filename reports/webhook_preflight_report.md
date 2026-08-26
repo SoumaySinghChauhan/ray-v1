@@ -391,8 +391,8 @@ services/api/.venv/bin/uvicorn services.api.main:app --host 0.0.0.0 --port 8000 
 1. Set environment variables:
    ```bash
    export RAZORPAY_MODE=test
-   export RAZORPAY_KEY_ID=rzp_test_TUHTjowxRowaYr
-   export RAZORPAY_KEY_SECRET=dhb74g6uJuIj5wUj96NLYbb6
+   export RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
+   export RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
    export RAZORPAY_WEBHOOK_SECRET=<your_webhook_secret>
    ```
 
@@ -706,8 +706,8 @@ payment link with given reference_id: RAY-test_opp_1787722729-58379e45 already e
 **Environment variables required**:
 ```bash
 RAZORPAY_MODE=test
-RAZORPAY_KEY_ID=rzp_test_TUHTjowxRowaYr
-RAZORPAY_KEY_SECRET=dhb74g6uJuIj5wUj96NLYbb6
+RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
+RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
 RAZORPAY_WEBHOOK_SECRET=<get_from_dashboard>
 ```
 
