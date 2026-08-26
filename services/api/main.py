@@ -126,38 +126,63 @@ async def razorpay_webhook(request: Request):
     """
     Razorpay webhook receiver.
 
-    Verifies signature and processes Payment Link events.
+    SECURITY: Verifies signature BEFORE parsing JSON.
     Uses persistent database-backed services for restart safety.
     """
     import sys
     import os
+    import json
     sys.path.insert(0, '/Users/soumaysinghchauhan/Ray')
 
-    # Get raw body BEFORE parsing
+    # Step 1: Get raw body BEFORE any parsing
     raw_body = await request.body()
 
-    # Get signature header
+    # Step 2: Get signature header
     signature = request.headers.get("X-Razorpay-Signature", "")
 
-    # Get webhook secret
+    # Step 3: Get webhook secret
     webhook_secret = os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
 
+    # Step 4: Reject if webhook secret not configured
     if not webhook_secret:
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"error": "Webhook secret not configured"}
         )
 
-    # Parse JSON payload
+    # Step 5: Reject if signature missing
+    if not signature:
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"error": "Missing signature"}
+        )
+
+    # Step 6: VERIFY SIGNATURE BEFORE PARSING JSON
+    from execution.providers import verify_webhook_signature
+
+    signature_valid = verify_webhook_signature(
+        payload_body=raw_body,
+        signature=signature,
+        secret=webhook_secret,
+    )
+
+    # Step 7: Reject invalid signature BEFORE parsing JSON
+    if not signature_valid:
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"error": "Invalid signature"}
+        )
+
+    # Step 8: ONLY AFTER signature verification, parse JSON
     try:
-        payload = await request.json()
+        payload = json.loads(raw_body)
     except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": f"Invalid JSON payload: {str(e)}"}
         )
 
-    # Initialize persistent services with database
+    # Step 9: Initialize persistent services with database
     from database.session import SessionLocal
     from execution.service_persistent import PersistentExecutionService
     from execution.webhooks_persistent import PersistentWebhookHandler
@@ -174,7 +199,7 @@ async def razorpay_webhook(request: Request):
         # Create persistent webhook handler
         handler = PersistentWebhookHandler(execution_service, webhook_secret, db)
 
-        # Process webhook
+        # Process webhook (signature already verified)
         result = handler.process_webhook(
             raw_body=raw_body,
             signature=signature,

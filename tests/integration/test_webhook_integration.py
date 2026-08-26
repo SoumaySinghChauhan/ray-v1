@@ -110,9 +110,9 @@ def test_webhook_invalid_signature(client, webhook_secret):
         },
     )
 
-    assert response.status_code == 400
+    # Signature verification now returns 401 (Unauthorized), not 400
+    assert response.status_code == 401
     data = response.json()
-    assert data["success"] is False
     assert "Invalid signature" in data["error"]
 
 
@@ -148,9 +148,9 @@ def test_webhook_modified_payload_rejected(client, webhook_secret):
         },
     )
 
-    assert response.status_code == 400
+    # Signature verification now returns 401 (Unauthorized), not 400
+    assert response.status_code == 401
     data = response.json()
-    assert data["success"] is False
     assert "Invalid signature" in data["error"]
 
 
@@ -166,7 +166,12 @@ def test_webhook_missing_secret(client, monkeypatch):
 
 
 def test_webhook_malformed_json(client, webhook_secret):
-    """Test webhook with malformed JSON is rejected."""
+    """
+    Test webhook with malformed JSON is rejected.
+
+    SECURITY: With correct ordering, signature is verified BEFORE JSON parsing.
+    Since dummy_signature is invalid, this returns 401 (not 400).
+    """
     malformed_body = b"not valid json"
     signature = "dummy_signature"
 
@@ -179,6 +184,8 @@ def test_webhook_malformed_json(client, webhook_secret):
         },
     )
 
-    assert response.status_code == 400
+    # With correct security ordering: signature verified BEFORE JSON parsing
+    # Invalid signature returns 401, even though JSON is also malformed
+    assert response.status_code == 401
     data = response.json()
-    assert "Invalid JSON" in data["error"]
+    assert "Invalid signature" in data["error"]

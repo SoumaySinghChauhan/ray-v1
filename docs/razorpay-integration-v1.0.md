@@ -194,13 +194,22 @@ Opportunity state updated
 2. Extract `X-Razorpay-Signature` header
 3. Calculate HMAC: `HMAC-SHA256(raw_body, webhook_secret)`
 4. Compare signatures (constant-time comparison)
-5. Reject if invalid
+5. **Reject invalid signature (HTTP 401) BEFORE parsing JSON**
+6. ONLY after authentication: Parse and process JSON
 
-**Security**:
-- Verify BEFORE parsing JSON
-- Reject if secret missing
+**Security** (CRITICAL):
+- **Signature verified BEFORE JSON parsing**
+- Invalid signature returns HTTP 401 (Unauthorized)
+- Missing signature returns HTTP 401 (Unauthorized)
+- Malformed JSON returns HTTP 400 (Bad Request) ONLY if signature is valid
+- Reject if secret missing (HTTP 500)
 - Log verification failures
 - Never log webhook secret
+
+RAY verifies the Razorpay webhook signature against the raw request body BEFORE parsing or processing the JSON payload. This security-first ordering prevents:
+- Information disclosure via error messages without authentication
+- Resource exhaustion from expensive JSON parsing on unauthenticated requests  
+- JSON parser vulnerabilities being exploitable without valid credentials
 
 ### Webhook Idempotency
 

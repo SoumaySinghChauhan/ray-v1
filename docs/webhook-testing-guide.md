@@ -10,10 +10,11 @@
 
 ✅ Webhook route integrated at `POST /webhooks/razorpay`  
 ✅ Signature verification implemented (HMAC-SHA256)  
+✅ **SECURITY: Signature verified BEFORE JSON parsing**  
 ✅ WebhookHandler connected to FastAPI  
 ✅ Raw body capture before JSON parsing  
-⚠️ Webhook secret must be set in `.env`  
-⚠️ Execution records stored in-memory (lost on restart)
+✅ Database-backed persistence (restart-safe)  
+✅ Webhook secret loaded from `.env`
 
 ---
 
