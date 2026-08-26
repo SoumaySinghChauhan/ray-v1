@@ -102,6 +102,7 @@ async def razorpay_webhook(request: Request):
     Razorpay webhook receiver.
 
     Verifies signature and processes Payment Link events.
+    Uses persistent database-backed services for restart safety.
     """
     import sys
     import os
@@ -131,37 +132,44 @@ async def razorpay_webhook(request: Request):
             content={"error": f"Invalid JSON payload: {str(e)}"}
         )
 
-    # Initialize webhook handler
-    from execution.service import ExecutionService
+    # Initialize persistent services with database
+    from database.session import SessionLocal
+    from execution.service_persistent import PersistentExecutionService
+    from execution.webhooks_persistent import PersistentWebhookHandler
     from execution.providers import MockPaymentLinkExecutor
-    from execution.webhooks import WebhookHandler
 
-    # Create execution service (in-memory for now)
-    # TODO: Load from database
-    executor = MockPaymentLinkExecutor()
-    execution_service = ExecutionService(executor)
+    # Create database session
+    db = SessionLocal()
 
-    # Create webhook handler
-    handler = WebhookHandler(execution_service, webhook_secret)
+    try:
+        # Create persistent execution service
+        executor = MockPaymentLinkExecutor()
+        execution_service = PersistentExecutionService(executor, db)
 
-    # Process webhook
-    result = handler.process_webhook(
-        raw_body=raw_body,
-        signature=signature,
-        payload=payload,
-    )
+        # Create persistent webhook handler
+        handler = PersistentWebhookHandler(execution_service, webhook_secret, db)
 
-    # Return response
-    if result.get("success"):
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content=result
+        # Process webhook
+        result = handler.process_webhook(
+            raw_body=raw_body,
+            signature=signature,
+            payload=payload,
         )
-    else:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content=result
-        )
+
+        # Return response
+        if result.get("success"):
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content=result
+            )
+        else:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=result
+            )
+
+    finally:
+        db.close()
 
 
 # ============================================================================

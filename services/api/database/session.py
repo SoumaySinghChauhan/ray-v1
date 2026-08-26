@@ -18,10 +18,10 @@ from database.models import (
 # Load environment
 load_dotenv()
 
-# Database URL
+# Database URL (use SQLite for local testing if DATABASE_URL not set)
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:postgres@localhost:5432/ray_dev"
+    "sqlite:///./ray_v1.db"  # SQLite fallback for testing
 )
 
 # Create engine

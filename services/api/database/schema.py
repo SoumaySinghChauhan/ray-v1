@@ -339,7 +339,7 @@ class AuditEvent(Base):
     # Decision details
     decision = Column(String(255), nullable=True)
     reason = Column(Text, nullable=True)
-    metadata = Column(JSON, nullable=True)
+    event_metadata = Column(JSON, nullable=True)
 
     # Versioning
     policy_version = Column(String(50), nullable=True)
