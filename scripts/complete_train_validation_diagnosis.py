@@ -42,13 +42,22 @@ from ai.diagnosis.prompt import (
 class DiagnosisCompleter:
     """Completes diagnosis coverage for TRAIN+VALIDATION with test firewall."""
 
-    def __init__(self):
-        """Initialize diagnosis completer."""
+    def __init__(self, checkpoint_interval: int = 10):
+        """Initialize diagnosis completer.
+
+        Args:
+            checkpoint_interval: Save checkpoint every N diagnoses
+        """
         self.project_root = Path(__file__).parent.parent
         self.data_dir = self.project_root / "datasets" / "v1.0.0" / "ml"
         self.pilot_dir = self.project_root / "datasets" / "v1.0.0" / "diagnoses_local"
         self.output_dir = self.project_root / "datasets" / "v1.0.0" / "diagnoses_local_v1"
         self.output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Checkpointing
+        self.checkpoint_file = self.output_dir / "diagnoses_checkpoint.parquet"
+        self.checkpoint_interval = checkpoint_interval
+        self.checkpoint_buffer = []
 
         # Test firewall
         self.test_accessed = False
@@ -62,6 +71,7 @@ class DiagnosisCompleter:
             'retries': 0,
             'schema_failures': 0,
             'preserved_from_pilot': 0,
+            'preserved_from_checkpoint': 0,
             'latencies': [],
             'errors': [],
         }
@@ -73,31 +83,109 @@ class DiagnosisCompleter:
         if self.test_diagnoses_attempted > 0:
             raise RuntimeError(f"CRITICAL: {self.test_diagnoses_attempted} test diagnoses attempted! Halting.")
 
+    def load_checkpoint(self) -> pd.DataFrame:
+        """
+        Load checkpoint file if it exists.
+
+        Returns:
+            DataFrame with checkpoint diagnoses, or empty DataFrame
+        """
+        if not self.checkpoint_file.exists():
+            return pd.DataFrame()
+
+        try:
+            checkpoint_df = pd.read_parquet(self.checkpoint_file)
+            print(f"  Loaded checkpoint: {len(checkpoint_df)} diagnoses")
+
+            # Validate checkpoint integrity
+            required_cols = ['opportunity_id', 'customer_id', 'diagnostic_class']
+            if not all(col in checkpoint_df.columns for col in required_cols):
+                print("  WARNING: Checkpoint file missing required columns - ignoring")
+                return pd.DataFrame()
+
+            # Filter to valid diagnoses only
+            valid_df = checkpoint_df[checkpoint_df['diagnostic_class'].notna()].copy()
+            print(f"  Valid checkpoint diagnoses: {len(valid_df)}")
+
+            self.stats['preserved_from_checkpoint'] = len(valid_df)
+            return valid_df
+
+        except Exception as e:
+            print(f"  WARNING: Failed to load checkpoint: {e}")
+            return pd.DataFrame()
+
+    def save_checkpoint(self, all_results: List[Dict[str, Any]]):
+        """
+        Save checkpoint atomically using temp file + rename.
+
+        Args:
+            all_results: All diagnosis results so far
+        """
+        if not all_results:
+            return
+
+        try:
+            # Convert to DataFrame
+            df = pd.DataFrame(all_results)
+
+            # Write to temp file
+            temp_file = self.checkpoint_file.with_suffix('.parquet.tmp')
+            df.to_parquet(temp_file, index=False)
+
+            # Atomic rename
+            temp_file.replace(self.checkpoint_file)
+
+        except Exception as e:
+            print(f"  WARNING: Checkpoint save failed: {e}")
+            # Non-fatal - continue processing
+
     def load_existing_diagnoses(self) -> pd.DataFrame:
         """
-        Load existing pilot diagnoses to preserve.
+        Load existing pilot diagnoses AND checkpoint to preserve.
 
         Returns:
             DataFrame with existing valid diagnoses
         """
-        print("[1/8] Loading existing pilot diagnoses...")
+        print("[1/8] Loading existing diagnoses...")
 
+        all_existing = []
+
+        # Load pilot diagnoses
         pilot_file = self.pilot_dir / "diagnoses_pilot_100.parquet"
-        if not pilot_file.exists():
-            print("  No existing pilot diagnoses found.")
+        if pilot_file.exists():
+            pilot_df = pd.read_parquet(pilot_file)
+            print(f"  Loaded pilot: {len(pilot_df)} diagnoses")
+
+            # Filter to valid diagnoses only
+            valid_pilot = pilot_df[pilot_df['diagnostic_class'].notna()].copy()
+            print(f"  Valid pilot diagnoses: {len(valid_pilot)}")
+            print(f"  Failed pilot diagnoses: {len(pilot_df) - len(valid_pilot)} (will be retried)")
+
+            self.stats['preserved_from_pilot'] = len(valid_pilot)
+            all_existing.append(valid_pilot)
+        else:
+            print("  No pilot diagnoses found")
+
+        # Load checkpoint (resume capability)
+        checkpoint_df = self.load_checkpoint()
+        if len(checkpoint_df) > 0:
+            all_existing.append(checkpoint_df)
+
+        # Combine and deduplicate
+        if not all_existing:
+            print("  No existing diagnoses found - starting from scratch")
             return pd.DataFrame()
 
-        pilot_df = pd.read_parquet(pilot_file)
-        print(f"  Loaded {len(pilot_df)} pilot diagnoses")
+        combined = pd.concat(all_existing, ignore_index=True)
 
-        # Filter to valid diagnoses only
-        valid_df = pilot_df[pilot_df['diagnostic_class'].notna()].copy()
-        print(f"  Valid diagnoses: {len(valid_df)}")
-        print(f"  Failed diagnoses: {len(pilot_df) - len(valid_df)} (will be retried)")
+        # Deduplicate by opportunity_id (keep first occurrence)
+        if combined['opportunity_id'].duplicated().sum() > 0:
+            print(f"  Deduplicating {combined['opportunity_id'].duplicated().sum()} duplicate opportunity IDs")
+            combined = combined.drop_duplicates(subset=['opportunity_id'], keep='first')
 
-        self.stats['preserved_from_pilot'] = len(valid_df)
+        print(f"  Total existing valid diagnoses: {len(combined)}")
 
-        return valid_df
+        return combined
 
     def identify_missing_opportunities(
         self,
@@ -184,6 +272,7 @@ class DiagnosisCompleter:
 
         results = []
         errors = []
+        diagnoses_since_checkpoint = 0
 
         # Sequential processing for resource safety
         for idx, row in tqdm(opportunities_df.iterrows(), total=len(opportunities_df), desc=f"  {split_name}"):
@@ -250,6 +339,7 @@ class DiagnosisCompleter:
 
                 self.stats['successful'] += 1
                 self.stats['latencies'].append(elapsed)
+                diagnoses_since_checkpoint += 1
 
             except ValidationError as e:
                 # Schema validation failed
@@ -275,6 +365,8 @@ class DiagnosisCompleter:
                     'error_message': str(e),
                 })
 
+                diagnoses_since_checkpoint += 1
+
             except Exception as e:
                 # LLM call failed
                 elapsed = time.time() - start_time
@@ -297,6 +389,17 @@ class DiagnosisCompleter:
                     'error_type': 'llm_call_failure',
                     'error_message': str(e),
                 })
+
+                diagnoses_since_checkpoint += 1
+
+            # Checkpoint every N diagnoses
+            if diagnoses_since_checkpoint >= self.checkpoint_interval:
+                self.save_checkpoint(results)
+                diagnoses_since_checkpoint = 0
+
+        # Final checkpoint at end of batch
+        if results:
+            self.save_checkpoint(results)
 
         self.stats['errors'].extend(errors)
 
@@ -473,6 +576,8 @@ class DiagnosisCompleter:
             'successful_count': metrics['successful'],
             'failed_count': metrics['failed'],
             'preserved_from_pilot': self.stats['preserved_from_pilot'],
+            'preserved_from_checkpoint': self.stats['preserved_from_checkpoint'],
+            'checkpoint_interval': self.checkpoint_interval,
             'run_timestamp': datetime.now(timezone.utc).isoformat(),
             'test_accessed': self.test_accessed,
             'test_diagnoses_attempted': self.test_diagnoses_attempted,
@@ -482,6 +587,11 @@ class DiagnosisCompleter:
         with open(manifest_path, 'w') as f:
             json.dump(manifest, f, indent=2)
         print(f"  Saved: {manifest_path}")
+
+        # Clean up checkpoint file on successful completion
+        if self.checkpoint_file.exists():
+            self.checkpoint_file.unlink()
+            print(f"  Removed checkpoint file (run completed successfully)")
 
         # Save quality report
         quality_report = f"""RAY V1 - Diagnosis Quality Report
@@ -515,6 +625,8 @@ DIAGNOSTIC CLASS DISTRIBUTION:
             quality_report += f"  {cls}: {count}\n"
 
         quality_report += f"\nPRESERVED FROM PILOT: {self.stats['preserved_from_pilot']} diagnoses\n"
+        quality_report += f"PRESERVED FROM CHECKPOINT: {self.stats['preserved_from_checkpoint']} diagnoses\n"
+        quality_report += f"CHECKPOINT INTERVAL: Every {self.checkpoint_interval} diagnoses\n"
 
         quality_path = self.output_dir / "quality_report.txt"
         with open(quality_path, 'w') as f:
@@ -612,9 +724,16 @@ IMPORTANT:
         help='Report what would be diagnosed without running inference'
     )
 
+    parser.add_argument(
+        '--checkpoint-interval',
+        type=int,
+        default=10,
+        help='Save checkpoint every N diagnoses (default: 10)'
+    )
+
     args = parser.parse_args()
 
-    completer = DiagnosisCompleter()
+    completer = DiagnosisCompleter(checkpoint_interval=args.checkpoint_interval)
 
     if args.dry_run:
         print("=" * 70)
