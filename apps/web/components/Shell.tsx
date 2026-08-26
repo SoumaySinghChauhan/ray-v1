@@ -37,28 +37,36 @@ export function Shell({ children }: { children: ReactNode }) {
           <span className="text-sm font-semibold tracking-[0.22em]">RAY</span>
         </div>
 
-        <nav className="flex lg:flex-col gap-0.5 px-3 pb-3 lg:pb-0 overflow-x-auto lg:overflow-visible" aria-label="Primary">
-          {NAV.map((item) => {
-            const active =
-              item.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={`t-fast whitespace-nowrap px-2.5 py-1.5 text-xs rounded-sm ${
-                  active
-                    ? "text-ink bg-surface-3"
-                    : "text-ink-3 hover:text-ink-2 hover:bg-surface-2"
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="relative min-w-0 lg:contents">
+          <nav className="flex lg:flex-col gap-0.5 px-3 pb-3 lg:pb-0 overflow-x-auto lg:overflow-visible" aria-label="Primary">
+            {NAV.map((item) => {
+              const active =
+                item.href === "/"
+                  ? pathname === "/"
+                  : pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`t-fast whitespace-nowrap px-2.5 py-1.5 text-xs rounded-sm ${
+                    active
+                      ? "text-ink bg-surface-3"
+                      : "text-ink-3 hover:text-ink-2 hover:bg-surface-2"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+          {/* Scroll affordance — hints the nav overflows on narrow viewports */}
+          <div
+            className="lg:hidden pointer-events-none absolute right-0 top-0 bottom-3 w-8"
+            style={{ background: "linear-gradient(to right, transparent, var(--surface-1))" }}
+            aria-hidden="true"
+          />
+        </div>
 
         {/* System status footer */}
         <div className="hidden lg:block mt-auto px-5 py-5 space-y-3">

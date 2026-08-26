@@ -73,11 +73,11 @@ export default function DemoPage() {
       const failIndex = isBlock
         ? ["VALID_ACTION_TYPE", "OPPORTUNITY_ACTIONABLE", "DO_NOT_CONTACT_CHECK", "DUPLICATE_ACTION_CHECK", "AUTONOMOUS_AMOUNT_LIMIT_CHECK", "MAX_CONTACTS_CHECK", "DAILY_CAPACITY_CHECK"].indexOf(o.blockedRule ?? "")
         : -1;
-      for (let i = 1; i <= 7; i++) {
+      const lastRule = failIndex >= 0 ? failIndex + 1 : 7;
+      for (let i = 1; i <= lastRule; i++) {
         later(() => setRuleCount(i), i * 160);
-        if (failIndex >= 0 && i === failIndex + 1) break;
       }
-      later(() => setPhase(6), 7 * 160 + 400);
+      later(() => setPhase(6), lastRule * 160 + 400);
       return;
     }
 
