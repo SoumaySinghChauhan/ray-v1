@@ -1,0 +1,65 @@
+{
+  "prompt": "7C",
+  "dataset_version": "1.0.0",
+  "diagnosis_version": "1.0.0",
+  "feature_manifest_version": "1.0.0",
+  "random_seed": 43,
+  "training_timestamp": "2026-08-26T16:25:58.309375+00:00",
+  "test_accessed": false,
+  "python_version": "3.14.6 (main, Jun 10 2026, 10:03:53) [Clang 21.0.0 (clang-2100.0.123.102)]",
+  "sklearn_version": "1.9.0",
+  "lightgbm_version": "4.7.0",
+  "xgboost_version": "3.4.1",
+  "model_a": {
+    "selected": "logistic_regression",
+    "calibrated": true,
+    "validation_metrics": {
+      "roc_auc": 0.6860937923556519,
+      "pr_auc": 0.34330715902100906,
+      "brier_score": 0.15585761741709253,
+      "log_loss": 0.4812841966666281
+    }
+  },
+  "model_b": {
+    "status": "TRAINED",
+    "selected": "logistic_regression",
+    "calibrated": true,
+    "validation_metrics": {
+      "roc_auc": 0.6860937923556518,
+      "pr_auc": 0.3511765367958481,
+      "brier_score": 0.15498552926829068,
+      "log_loss": 0.4799178495890224
+    }
+  },
+  "baseline": {
+    "type": "HistoricalRecoveryRateBaseline",
+    "validation_metrics": {
+      "roc_auc": 0.6684738411493629,
+      "pr_auc": 0.3299431094505702,
+      "brier_score": 0.18066539784185673
+    }
+  },
+  "comparison": [
+    {
+      "Model": "Baseline",
+      "ROC-AUC": "0.6685",
+      "PR-AUC": "0.3299",
+      "Brier": "0.1807",
+      "Log Loss": "N/A"
+    },
+    {
+      "Model": "Model A (logistic_regression, calibrated)",
+      "ROC-AUC": "0.6861",
+      "PR-AUC": "0.3433",
+      "Brier": "0.1559",
+      "Log Loss": "0.4813"
+    },
+    {
+      "Model": "Model B (logistic_regression, calibrated)",
+      "ROC-AUC": "0.6861",
+      "PR-AUC": "0.3512",
+      "Brier": "0.1550",
+      "Log Loss": "0.4799"
+    }
+  ]
+}
