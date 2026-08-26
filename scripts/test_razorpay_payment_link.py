@@ -16,6 +16,10 @@ import argparse
 import os
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -98,9 +102,12 @@ def main():
     # Step 4: Create test Payment Link
     print("[4/5] Creating test Payment Link...")
 
-    # Create test opportunity
+    # Create test opportunity with unique ID
+    import time
+    unique_id = f"test_opp_{int(time.time())}"
+
     test_opportunity = {
-        "opportunity_id": "test_opp_001",
+        "opportunity_id": unique_id,
         "merchant_id": "test_merchant",
         "customer_id": "test_customer",
         "amount": 100.0,  # ₹100 (minimal amount for testing)
@@ -113,7 +120,7 @@ def main():
     # Create ALLOW policy decision
     test_decision = PolicyDecision(
         decision=PolicyDecisionType.ALLOW.value,
-        opportunity_id="test_opp_001",
+        opportunity_id=unique_id,
         action_type="create_payment_link",
         policy_version="1.0.0",
         evaluated_at=datetime.now(timezone.utc).isoformat(),
