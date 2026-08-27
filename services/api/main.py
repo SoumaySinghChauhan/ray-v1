@@ -32,6 +32,7 @@ from datetime import datetime
 # Local imports (to be implemented)
 from .action_registry import ActionType, list_available_actions, validate_action_type
 from .types import FailureClass, PolicyDecision
+from .recovery_router import router as recovery_router
 from config.v1_config import get_config
 
 
@@ -53,6 +54,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(recovery_router)
 
 
 # ============================================================================
@@ -235,39 +238,11 @@ async def razorpay_webhook(request: Request):
 
 
 # ============================================================================
-# Recovery Decision Endpoints (Scaffolded)
-# ============================================================================
-
-@app.post("/recovery/evaluate")
-async def evaluate_recovery_opportunity():
-    """
-    Evaluate a recovery opportunity and make decision.
-
-    This is the main decision pipeline entry point.
-    Implementation deferred to later prompt.
-    """
-    return JSONResponse(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        content={"detail": "Recovery evaluation not yet implemented"}
-    )
-
-
-# ============================================================================
-# Audit Endpoints (Scaffolded)
-# ============================================================================
-
-@app.get("/audit/opportunity/{opportunity_id}")
-async def get_opportunity_audit(opportunity_id: str):
-    """
-    Retrieve complete audit trail for an opportunity.
-    Implementation deferred to later prompt.
-    """
-    return JSONResponse(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        content={"detail": "Audit retrieval not yet implemented"}
-    )
-
-
+# Recovery Decision & Audit Endpoints
+#
+# Real implementations live in recovery_router.py / recovery_service.py,
+# mounted above via app.include_router(recovery_router). Kept out of this
+# file so the orchestration logic isn't scattered across main.py.
 # ============================================================================
 # Error Handlers
 # ============================================================================

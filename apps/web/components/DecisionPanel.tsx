@@ -9,10 +9,19 @@ import { inr } from "@/lib/format";
 
 type Tab = "trace" | "policy" | "provenance";
 
+const EDGE_CLS: Record<Opportunity["outcome"], string> = {
+  RECOVERED: "border-l-recovered",
+  PENDING: "border-l-pending",
+  BLOCKED: "border-l-blocked",
+  NOT_RECOVERED: "border-l-ink-3",
+  SKIPPED: "border-l-ink-3",
+};
+
 /** Slide-over decision detail — TRACE / POLICY / PROVENANCE tabs, used from list pages. */
 export function DecisionPanel({ opportunity, onClose }: { opportunity: Opportunity; onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("trace");
   const o = opportunity;
+  const policyLabel = o.policy === "ALLOW" ? "ALLOWED" : o.policy === "BLOCK" ? "BLOCKED" : "SKIPPED";
 
   return (
     <div className="fixed inset-0 z-30 flex justify-end" role="dialog" aria-modal="true" aria-label="Decision trace">
@@ -21,7 +30,9 @@ export function DecisionPanel({ opportunity, onClose }: { opportunity: Opportuni
         onClick={onClose}
         aria-label="Close decision trace"
       />
-      <div className="anim-fade-up relative w-full max-w-md h-full bg-surface-1 border-l border-separator overflow-y-auto">
+      <div
+        className={`anim-fade-up relative w-full max-w-md h-full bg-surface-1 border-l-2 overflow-y-auto ${EDGE_CLS[o.outcome]}`}
+      >
         <div className="sticky top-0 bg-surface-1 border-b border-separator px-6 py-4 flex items-center justify-between z-10">
           <div className="label-2">DECISION TRACE</div>
           <button onClick={onClose} className="t-fast text-ink-3 hover:text-ink" aria-label="Close">
@@ -30,7 +41,12 @@ export function DecisionPanel({ opportunity, onClose }: { opportunity: Opportuni
         </div>
 
         <div className="px-6 pt-5">
-          <OutcomeBadge outcome={o.outcome} />
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center border border-separator px-2 py-0.5 text-[0.625rem] tracking-[0.1em] text-ink-2">
+              {policyLabel}
+            </span>
+            <OutcomeBadge outcome={o.outcome} />
+          </div>
           <h3 className="text-xl font-medium tracking-tight mt-2">{o.customer}</h3>
           <div className="fin text-lg text-ink-2 mt-0.5">{inr(o.amountInr)}</div>
           <div className="mono text-[0.6875rem] text-ink-3 mt-1">{o.id}</div>

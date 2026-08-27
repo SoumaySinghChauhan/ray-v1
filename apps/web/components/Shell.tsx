@@ -14,6 +14,7 @@ import {
   PlaySquare,
   ChevronDown,
 } from "lucide-react";
+import { ThemeToggle } from "./ThemeToggle";
 
 interface NavItem {
   href: string;
@@ -136,6 +137,7 @@ function TopBar({ pathname }: { pathname: string }) {
           SYSTEM OPERATIONAL
         </span>
         <TestModePill />
+        <ThemeToggle />
       </div>
     </div>
   );

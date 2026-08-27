@@ -1,27 +1,102 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { OPPORTUNITIES } from "@/lib/demo";
-import { inr, pct, num } from "@/lib/format";
-import { Label, OutcomeBadge } from "@/components/ui";
-import { Sparkline, Donut } from "@/components/charts";
-import { CheckCircle2 } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import { api, ApiError, type ApiExecutionRow } from "@/lib/api";
+import { inr, num } from "@/lib/format";
+import { Label, KpiCards } from "@/components/ui";
+import { LoadingState, ErrorState, EmptyState } from "@/components/DataState";
 
-const executed = OPPORTUNITIES.filter((o) => o.execution);
-const recovered = executed.filter((o) => o.outcome === "RECOVERED");
-const pending = executed.filter((o) => o.outcome === "PENDING");
-const notRecovered = executed.filter((o) => o.outcome === "NOT_RECOVERED");
-const verifiedInr = recovered.reduce((s, o) => s + (o.recoveredInr ?? 0), 0);
-
-const TREND = {
-  actions: [5, 6, 6, 7, 7, 8, 7],
-  recovered: [1, 1, 2, 2, 3, 2, 3],
-  pending: [2, 2, 3, 2, 2, 3, 3],
-  notRecovered: [0, 1, 1, 0, 1, 1, 1],
-  verified: [8000, 11000, 14500, 16000, 18500, 19800, 21600],
+const STATE_TONE: Record<string, string> = {
+  SUCCEEDED: "text-recovered",
+  PENDING: "text-pending",
+  SUBMITTED: "text-pending",
+  FAILED: "text-blocked",
+  UNKNOWN: "text-ink-3",
+  CANCELLED: "text-ink-3",
 };
 
+const GUARDRAILS = [
+  "All executions in Razorpay Test Mode",
+  "No live payments or captures",
+  "No secrets exposed in frontend",
+];
+
+function FlowStep({ label, reached, tone = "neutral" }: { label: string; reached: boolean; tone?: "neutral" | "recovered" | "pending" | "blocked" }) {
+  const cls =
+    tone === "recovered" ? "text-recovered" : tone === "pending" ? "text-pending" : tone === "blocked" ? "text-blocked" : reached ? "text-ink" : "text-ink-3";
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${reached ? "bg-current" : "bg-ink-3"} ${cls}`} />
+      <span className={`text-[0.6875rem] tracking-[0.08em] font-medium ${cls}`}>{label}</span>
+    </div>
+  );
+}
+
+function ExecutionFlowPanel({ latest }: { latest: ApiExecutionRow | null }) {
+  if (!latest) {
+    return (
+      <div className="border border-separator p-5">
+        <div className="label mb-4">EXECUTION FLOW</div>
+        <p className="text-xs text-ink-3">No executions yet.</p>
+      </div>
+    );
+  }
+
+  const recovered = latest.outcome?.outcome_type === "RECOVERED";
+
+  return (
+    <div className="border border-separator p-5">
+      <div className="label mb-1">EXECUTION FLOW</div>
+      <div className="text-xs text-ink-2 mb-4">{latest.customer_name}</div>
+      <div className="space-y-3">
+        <FlowStep label="AUTHORIZED" reached />
+        <FlowStep label="SUBMITTED" reached={latest.state !== "PENDING"} />
+        <FlowStep label="SUCCEEDED" reached={latest.state === "SUCCEEDED"} tone={latest.state === "FAILED" ? "blocked" : "neutral"} />
+        <div className="pt-2 mt-2 border-t border-separator" />
+        <FlowStep label="AWAITING PAYMENT" reached={latest.state === "SUCCEEDED" && !latest.webhook} tone="pending" />
+        <FlowStep label="RECEIVED" reached={!!latest.webhook} />
+        <FlowStep label="VERIFIED" reached={!!latest.webhook?.signature_verified} />
+        <FlowStep label="RECORDED" reached={!!latest.outcome} tone={recovered ? "recovered" : "neutral"} />
+      </div>
+      <Link
+        href={`/execution/${latest.opportunity_id}`}
+        className="t-fast block mt-5 pt-4 border-t border-separator text-[0.6875rem] tracking-[0.1em] text-ink-2 hover:text-ink"
+      >
+        VIEW FULL TRACE →
+      </Link>
+    </div>
+  );
+}
+
 export default function ExecutionIndexPage() {
+  const [executions, setExecutions] = useState<ApiExecutionRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setError(null);
+    setExecutions(null);
+    try {
+      const res = await api.listExecutions();
+      setExecutions(res.executions);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Failed to load executions.");
+    }
+  }, []);
+
+  useEffect(() => {
+    const id = setTimeout(load, 0);
+    return () => clearTimeout(id);
+  }, [load]);
+
+  const succeeded = executions?.filter((e) => e.state === "SUCCEEDED").length ?? 0;
+  const pending = executions?.filter((e) => e.state === "SUCCEEDED" && !e.outcome).length ?? 0;
+  const failed = executions?.filter((e) => e.state === "FAILED").length ?? 0;
+  const verifiedInr = executions
+    ?.filter((e) => e.outcome?.outcome_type === "RECOVERED")
+    .reduce((s, e) => s + e.outcome!.amount_recovered, 0) ?? 0;
+
   return (
     <div className="space-y-8">
       <header>
@@ -32,150 +107,90 @@ export default function ExecutionIndexPage() {
         </p>
       </header>
 
-      {/* KPI strip */}
-      <div className="border border-separator grid grid-cols-2 md:grid-cols-5">
-        {[
-          { label: "ACTIONS TODAY", sub: "Executed", value: num(executed.length), spark: TREND.actions, tone: "muted" as const },
-          { label: "RECOVERED", sub: pct(recovered.length / executed.length, 0) + " of executed", value: num(recovered.length), tone: "text-recovered", spark: TREND.recovered, sparkTone: "recovered" as const },
-          { label: "PENDING", sub: "Awaiting payment", value: num(pending.length), tone: "text-pending", spark: TREND.pending, sparkTone: "muted" as const },
-          { label: "NOT RECOVERED", sub: "Link expired unpaid", value: num(notRecovered.length), tone: "text-ink-2", spark: TREND.notRecovered, sparkTone: "blocked" as const },
-          { label: "VERIFIED RECOVERED", sub: "From executed", value: inr(verifiedInr), tone: "text-recovered", spark: TREND.verified, sparkTone: "recovered" as const },
-        ].map((it, i) => (
-          <div key={it.label} className={`p-5 ${i > 0 ? "border-t md:border-t-0 md:border-l border-separator" : ""}`}>
-            <div className={`fin text-2xl font-medium ${it.tone ?? "text-ink"}`}>{it.value}</div>
-            <div className="label mt-2">{it.label}</div>
-            <div className="text-[0.6875rem] text-ink-3 mt-0.5 mb-2">{it.sub}</div>
-            <Sparkline points={it.spark} tone={it.sparkTone} />
-          </div>
-        ))}
-      </div>
+      {executions === null && !error && <LoadingState label="Loading executions from the RAY backend…" />}
+      {error && <ErrorState message={error} onRetry={load} />}
+      {executions !== null && !error && executions.length === 0 && (
+        <EmptyState message="No executions yet. Create a Payment Link from an opportunity to see it here." />
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_20rem] gap-10">
-        {/* Ledger */}
-        <div className="overflow-x-auto -mx-5 px-5 lg:mx-0 lg:px-0">
-          <table className="w-full text-left min-w-[52rem]">
-            <thead>
-              <tr className="border-b border-separator">
-                <th className="label py-3 pr-4 font-medium">STATUS</th>
-                <th className="label py-3 pr-4 font-medium">EXECUTION</th>
-                <th className="label py-3 pr-4 font-medium">PAYMENT LINK</th>
-                <th className="label py-3 pr-4 font-medium">REFERENCE</th>
-                <th className="label py-3 pr-4 font-medium">AMOUNT</th>
-                <th className="label py-3 pr-4 font-medium">CREATED</th>
-                <th className="label py-3 pr-4 font-medium">WEBHOOK</th>
-              </tr>
-            </thead>
-            <tbody>
-              {executed.map((o) => (
-                <tr key={o.id} className="t-fast border-b border-separator/40 hover:bg-surface-2">
-                  <td className="py-3 pr-4">
-                    <OutcomeBadge outcome={o.outcome} />
-                  </td>
-                  <td className="py-3 pr-4">
-                    <Link href={`/execution/${o.id}`} className="mono text-[0.6875rem] text-ink-2 hover:text-ink t-fast">
-                      {o.execution!.executionId}
-                    </Link>
-                  </td>
-                  <td className="py-3 pr-4 mono text-[0.6875rem] text-ink-3">{o.execution!.paymentLinkId}</td>
-                  <td className="py-3 pr-4 mono text-[0.6875rem] text-ink-3">{o.execution!.referenceId}</td>
-                  <td className="py-3 pr-4 fin text-xs text-ink">{inr(o.amountInr)}</td>
-                  <td className="py-3 pr-4 mono text-[0.625rem] text-ink-3">{o.execution!.createdAt}</td>
-                  <td className="py-3 pr-4 text-[0.6875rem]">
-                    {o.webhook ? <span className="text-recovered">verified</span> : <span className="text-ink-3">—</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {executions !== null && !error && executions.length > 0 && (
+        <>
+          <KpiCards
+            items={[
+              { label: "ACTIONS", value: num(executions.length), sub: "All time" },
+              { label: "SUCCEEDED", value: num(succeeded), sub: executions.length > 0 ? `${((succeeded / executions.length) * 100).toFixed(0)}% success rate` : "—", tone: "recovered" },
+              { label: "AWAITING PAYMENT", value: num(pending), sub: "Pending", tone: "pending" },
+              { label: "FAILED", value: num(failed), sub: executions.length > 0 ? `${((failed / executions.length) * 100).toFixed(0)}% failure rate` : "—", tone: failed > 0 ? "blocked" : "ink" },
+              { label: "VERIFIED RECOVERED", value: inr(verifiedInr), sub: "From succeeded", tone: "recovered" },
+            ]}
+          />
 
-        {/* Right panel */}
-        <div className="space-y-8">
-          <div>
-            <div className="label mb-4">EXECUTION FLOW</div>
-            <div className="border border-separator p-4">
-              <div className="text-[0.6875rem] text-ink-3">RAY AUTHORIZES</div>
-              <div className="text-xs text-ink mt-0.5">Policy ALLOW</div>
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_18rem] gap-8">
+            <div className="min-w-0">
+              <div className="overflow-x-auto -mx-5 px-5 xl:mx-0 xl:px-0">
+                <table className="w-full text-left min-w-[52rem]">
+                  <thead>
+                    <tr className="border-b border-separator">
+                      <th className="label py-3 pr-4 font-medium">STATE</th>
+                      <th className="label py-3 pr-4 font-medium">EXECUTION ID / REFERENCE</th>
+                      <th className="label py-3 pr-4 font-medium">PAYMENT LINK ID</th>
+                      <th className="label py-3 pr-4 font-medium">AMOUNT</th>
+                      <th className="label py-3 pr-4 font-medium">CREATED AT</th>
+                      <th className="label py-3 pr-4 font-medium">OUTCOME</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {executions.map((e) => (
+                      <tr key={e.execution_id} className="t-fast border-b border-separator/40 hover:bg-surface-2">
+                        <td className="py-3 pr-4">
+                          <span className={`text-[0.625rem] tracking-[0.1em] font-medium ${STATE_TONE[e.state] ?? "text-ink-2"}`}>
+                            {e.state}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <Link href={`/execution/${e.opportunity_id}`} className="mono text-[0.6875rem] text-ink-2 hover:text-ink t-fast block">
+                            {e.execution_id.slice(0, 12)}…
+                          </Link>
+                          <span className="mono text-[0.625rem] text-ink-3">{e.reference_id}</span>
+                        </td>
+                        <td className="py-3 pr-4 mono text-[0.6875rem] text-ink-3">{e.payment_link_id ?? "—"}</td>
+                        <td className="py-3 pr-4 fin text-xs text-ink">{inr(e.amount)}</td>
+                        <td className="py-3 pr-4 mono text-[0.625rem] text-ink-3">
+                          {e.created_at ? new Date(e.created_at).toLocaleString() : "—"}
+                        </td>
+                        <td className="py-3 pr-4 text-[0.6875rem]">
+                          {e.outcome ? (
+                            <span className="text-recovered">{inr(e.outcome.amount_recovered)} verified</span>
+                          ) : e.webhook ? (
+                            <span className="text-pending">awaiting outcome</span>
+                          ) : (
+                            <span className="text-ink-3">awaiting payment</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <ol className="list-none mt-4">
-              {[
-                { label: "AUTHORIZED", sub: "Policy ALLOW", time: "10:42:11" },
-                { label: "SUBMITTED", sub: "Payment Link created", time: "10:42:12" },
-                { label: "SUCCEEDED", sub: "Payment Link active", time: "10:42:14", tag: "TEST MODE" },
-                { label: "RECEIVED", sub: "payment_link.paid", time: "10:44:19" },
-                { label: "VERIFIED", sub: "Signature verified", time: "10:44:19" },
-                { label: "RECORDED", sub: "Recovery recorded", time: "10:44:21" },
-              ].map((s, i, arr) => (
-                <li key={s.label} className="relative pl-7">
-                  <span className="absolute left-0 top-0.5 text-recovered" aria-hidden="true">
-                    <CheckCircle2 size={16} strokeWidth={1.75} />
-                  </span>
-                  {i < arr.length - 1 && (
-                    <span className="absolute left-[7.5px] top-[22px] bottom-[-4px] w-px bg-recovered/40" aria-hidden="true" />
-                  )}
-                  <div className="pb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-recovered text-xs font-medium tracking-[0.08em]">{s.label}</span>
-                      {s.tag && (
-                        <span className="border border-separator px-1.5 py-0.5 text-[0.5625rem] tracking-[0.08em] text-ink-2">
-                          {s.tag}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[0.6875rem] text-ink-3 mt-0.5">{s.sub}</div>
-                    <div className="mono text-[0.625rem] text-ink-3 mt-0.5">{s.time}</div>
-                  </div>
-                </li>
-              ))}
-            </ol>
-            <Link href="/decisions" className="t-fast block text-xs text-ink-2 hover:text-ink border-t border-separator pt-4">
-              View full trace →
-            </Link>
-          </div>
 
-          <div>
-            <div className="label mb-4">EXECUTION OUTCOMES</div>
-            <div className="flex items-center gap-6">
-              <Donut
-                slices={[
-                  { label: "Recovered", value: recovered.length, color: "var(--recovered)" },
-                  { label: "Pending", value: pending.length, color: "var(--pending)" },
-                  { label: "Not recovered", value: notRecovered.length, color: "var(--ink-3)" },
-                ]}
-              />
-              <div className="space-y-1.5 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-recovered" />
-                  <span className="text-ink-2">Recovered</span>
-                  <span className="fin text-ink ml-auto">{recovered.length} ({pct(recovered.length / executed.length, 0)})</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-pending" />
-                  <span className="text-ink-2">Pending</span>
-                  <span className="fin text-ink ml-auto">{pending.length} ({pct(pending.length / executed.length, 0)})</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-ink-3" />
-                  <span className="text-ink-2">Not recovered</span>
-                  <span className="fin text-ink ml-auto">{notRecovered.length} ({pct(notRecovered.length / executed.length, 0)})</span>
+            <div className="space-y-6">
+              <ExecutionFlowPanel latest={executions[0] ?? null} />
+              <div className="border border-separator p-5">
+                <div className="label mb-4">TEST MODE GUARDRAILS</div>
+                <div className="space-y-2.5">
+                  {GUARDRAILS.map((g) => (
+                    <div key={g} className="flex items-start gap-2.5">
+                      <ShieldCheck size={13} strokeWidth={1.75} className="text-ink-3 shrink-0 mt-0.5" />
+                      <span className="text-[0.6875rem] text-ink-2 leading-relaxed">{g}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
-
-          <div>
-            <div className="label mb-4">TEST MODE GUARDRAILS</div>
-            <ul className="space-y-2">
-              {["All executions in Razorpay Test Mode", "No live payments or captures", "No secrets exposed in frontend"].map((g) => (
-                <li key={g} className="flex items-center gap-2 text-xs text-ink-2">
-                  <CheckCircle2 size={14} strokeWidth={1.75} className="text-recovered shrink-0" />
-                  {g}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }

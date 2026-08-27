@@ -9,9 +9,9 @@ import {
 } from "@/lib/benchmark";
 import { TODAY, OPPORTUNITIES } from "@/lib/demo";
 import { inr, num, pct } from "@/lib/format";
-import { Label, Section, KV } from "@/components/ui";
+import { Label, Section, KV, KpiCards } from "@/components/ui";
 import { ComparisonBars } from "@/components/charts";
-import { CheckCircle2, XCircle, ShieldCheck, Lock, Clock, FileX } from "lucide-react";
+import { CheckCircle2, XCircle, ShieldCheck, Lock, Clock, FileX, BarChart3 } from "lucide-react";
 
 const STRATEGIES: StrategyBenchmark[] = [BENCHMARK.baseline, BENCHMARK.modelA, BENCHMARK.modelB];
 
@@ -108,19 +108,15 @@ export default function EvaluationPage() {
             accessed exactly once and no value on this page is recomputed by the frontend.
           </p>
         </div>
-        <div className="border border-separator grid grid-cols-2 sm:grid-cols-4 flex-1 min-w-[20rem]">
-          {[
-            { label: "TEST OPPORTUNITIES", sub: "Frozen test set", value: num(BENCHMARK_META.testSize) },
-            { label: "FROZEN RUN", sub: "No re-evaluation", value: "1" },
-            { label: "TOTAL ATTEMPTED", sub: "Operational amounts", value: inr(attempted) },
-            { label: "BOOTSTRAP UNCERTAINTY", sub: "1,000 resamples", value: "95% CI" },
-          ].map((it, i) => (
-            <div key={it.label} className={`p-4 ${i > 0 ? "border-l border-separator" : ""}`}>
-              <div className="fin text-xl font-medium text-ink">{it.value}</div>
-              <div className="label mt-1.5">{it.label}</div>
-              <div className="text-[0.625rem] text-ink-3 mt-0.5">{it.sub}</div>
-            </div>
-          ))}
+        <div className="flex-1 min-w-[20rem]">
+          <KpiCards
+            items={[
+              { label: "TEST OPPORTUNITIES", sub: "Frozen test set", value: num(BENCHMARK_META.testSize) },
+              { label: "FROZEN RUN", sub: "No re-evaluation", value: "1" },
+              { label: "TOTAL ATTEMPTED", sub: "Operational amounts", value: inr(attempted) },
+              { label: "BOOTSTRAP UNCERTAINTY", sub: "1,000 resamples", value: "95% CI" },
+            ]}
+          />
         </div>
       </header>
 
@@ -132,14 +128,19 @@ export default function EvaluationPage() {
       </div>
 
       {/* Headline finding */}
-      <div className="border-l-2 border-ink-3 pl-6 py-1">
-        <p className="text-lg text-ink leading-relaxed max-w-2xl">
-          Predictive improvements did not produce statistically significant economic gains in V1.
-        </p>
-        <p className="text-xs text-ink-3 mt-2">
-          Every bootstrap confidence interval for realized-recovery deltas contains zero (
-          {BENCHMARK_META.bootstrapIterations} iterations, case-level resampling).
-        </p>
+      <div className="border-l-2 border-recovered pl-6 py-4 flex items-start gap-4">
+        <span className="shrink-0 w-8 h-8 flex items-center justify-center border border-separator text-ink-3">
+          <BarChart3 size={15} strokeWidth={1.75} />
+        </span>
+        <div>
+          <p className="text-lg text-ink leading-relaxed max-w-2xl">
+            Predictive improvements did not produce statistically significant economic gains in V1.
+          </p>
+          <p className="text-xs text-ink-3 mt-2">
+            Every bootstrap confidence interval for realized-recovery deltas contains zero (
+            {BENCHMARK_META.bootstrapIterations} iterations, case-level resampling).
+          </p>
+        </div>
       </div>
 
       {/* Designations */}

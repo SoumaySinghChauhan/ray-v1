@@ -104,6 +104,41 @@ export function Figure({
   );
 }
 
+export interface KpiCardItem {
+  label: string;
+  value: ReactNode;
+  sub?: ReactNode;
+  tone?: "ink" | "recovered" | "pending" | "blocked";
+  chart?: ReactNode;
+}
+
+const KPI_TONE: Record<NonNullable<KpiCardItem["tone"]>, string> = {
+  ink: "text-ink",
+  recovered: "text-recovered",
+  pending: "text-pending",
+  blocked: "text-blocked",
+};
+
+/**
+ * Separate bordered KPI cards with gaps between them — the pattern used on
+ * Decisions, Execution, Audit, and Evaluation (distinct from Overview's
+ * single unified strip).
+ */
+export function KpiCards({ items }: { items: KpiCardItem[] }) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-nowrap gap-3">
+      {items.map((it) => (
+        <div key={it.label} className="border border-separator px-5 py-4 lg:flex-1 lg:min-w-0">
+          <div className={`fin text-2xl font-medium ${KPI_TONE[it.tone ?? "ink"]}`}>{it.value}</div>
+          <div className="label mt-1.5">{it.label}</div>
+          {it.sub && <div className="text-[0.6875rem] text-ink-3 mt-0.5">{it.sub}</div>}
+          {it.chart && <div className="mt-2">{it.chart}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function TestModeTag() {
   return (
     <span className="inline-flex items-center gap-1.5 border border-separator px-2 py-0.5 text-[0.625rem] tracking-[0.14em] text-ink-2">

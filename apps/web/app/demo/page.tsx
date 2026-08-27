@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Play, ArrowRight, CreditCard, Send, Radio, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Play, ArrowRight, CreditCard, Send, Radio, ShieldCheck, CheckCircle2, Info } from "lucide-react";
 import { DEMO_SCENARIOS, type DemoScenario } from "@/lib/demo";
 import { inr, pct } from "@/lib/format";
 import { CountUp } from "@/components/CountUp";
@@ -171,17 +171,24 @@ export default function DemoPage() {
             <div className="label mb-4">SCENARIO {scenario.index}</div>
             <h2 className="text-lg font-medium tracking-tight">{scenario.title}</h2>
 
-            <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-              <span className="text-ink-3">CUSTOMER</span>
-              <span className="text-ink-3">AMOUNT</span>
-              <span className="text-ink">{o.customer}</span>
-              <span className="fin text-ink">{inr(o.amountInr)}</span>
+            <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-xs">
+              <div>
+                <div className="label mb-1">CUSTOMER</div>
+                <div className="text-ink">{o.customer}</div>
+              </div>
+              <div>
+                <div className="label mb-1">AMOUNT</div>
+                <div className="fin text-ink">{inr(o.amountInr)}</div>
+              </div>
+              <div>
+                <div className="label mb-1">FAILURE REASON</div>
+                <div className="text-ink">{o.failureDetail}</div>
+              </div>
+              <div>
+                <div className="label mb-1">TIME</div>
+                <div className="mono text-ink-2">{o.time} IST</div>
+              </div>
             </div>
-            <div className="mt-3 text-xs">
-              <span className="text-ink-3 block">FAILURE REASON</span>
-              <span className="text-ink">{o.failureDetail}</span>
-            </div>
-            <div className="mt-2 mono text-[0.625rem] text-ink-3">{o.time} IST</div>
 
             <div className="mt-6">
               <div className="label mb-1.5">ABOUT THIS SCENARIO</div>
@@ -190,7 +197,7 @@ export default function DemoPage() {
 
             <button
               onClick={run}
-              className="t-fast mt-8 w-full flex items-center justify-center gap-2 px-8 py-3 bg-ink text-canvas text-xs font-medium tracking-[0.18em] hover:bg-ink-2 active:translate-y-px"
+              className="t-fast mt-8 inline-flex items-center justify-center gap-2 px-8 py-3 bg-ink text-canvas text-xs font-medium tracking-[0.18em] hover:bg-ink-2 active:translate-y-px"
             >
               <Play size={13} strokeWidth={2} fill="currentColor" />
               {phase === 0 ? "RUN RAY" : "RUN AGAIN"}
@@ -266,14 +273,20 @@ export default function DemoPage() {
             </div>
           )}
 
-          <p className="text-[0.6875rem] text-ink-3 border-t border-separator pt-4">
-            All scenarios are deterministic and use synthetic data. No live payments are executed.
-          </p>
         </div>
 
         {/* ── Animated decision rail ─────────────────────────── */}
         <div className="min-h-[28rem]">
-          <div className="label mb-6">DECISION RAIL</div>
+          <div className="flex items-center justify-between gap-3 mb-6">
+            <div className="label">DECISION RAIL</div>
+            <span
+              className="inline-flex items-center gap-1.5 border px-2 py-0.5 text-[0.5625rem] tracking-[0.1em]"
+              style={{ borderColor: "var(--pending)", color: "var(--pending)" }}
+            >
+              <span className="w-1 h-1 rounded-full bg-pending" />
+              RAZORPAY TEST MODE
+            </span>
+          </div>
           <ol className="list-none space-y-0">
             <Stage stage="failed" active label="FAILED PAYMENT" time={o.time} iconTone="blocked">
               <span className="fin text-lg font-medium">{inr(o.amountInr)}</span>
@@ -460,6 +473,20 @@ export default function DemoPage() {
             )}
           </ol>
         </div>
+      </div>
+
+      <div className="border-t border-separator pt-5 flex items-center justify-between gap-6 flex-wrap">
+        <div className="flex items-center gap-2.5 text-[0.6875rem] text-ink-3">
+          <Info size={14} strokeWidth={1.75} className="shrink-0" />
+          All scenarios are deterministic and use synthetic data. No live payments are executed.
+        </div>
+        <a
+          href="#top"
+          className="t-fast inline-flex items-center gap-2 border border-separator px-4 py-2 text-[0.6875rem] tracking-[0.08em] text-ink-2 hover:text-ink hover:bg-surface-2"
+        >
+          VIEW ALL SCENARIOS
+          <ArrowRight size={12} strokeWidth={1.75} />
+        </a>
       </div>
     </div>
   );
