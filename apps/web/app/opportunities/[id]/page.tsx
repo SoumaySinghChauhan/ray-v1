@@ -9,16 +9,7 @@ import { inr, pct } from "@/lib/format";
 import { KV, Label, Section, TestModeTag } from "@/components/ui";
 import { StageNode } from "@/components/StageIcon";
 import { LoadingState, ErrorState } from "@/components/DataState";
-
-const POLICY_RULE_LABELS: Record<string, string> = {
-  VALID_ACTION_TYPE: "VALID_ACTION_TYPE",
-  OPPORTUNITY_ACTIONABLE: "OPPORTUNITY_ACTIONABLE",
-  DO_NOT_CONTACT_CHECK: "DO_NOT_CONTACT_CHECK",
-  DUPLICATE_ACTION_CHECK: "DUPLICATE_ACTION_CHECK",
-  AUTONOMOUS_AMOUNT_LIMIT_CHECK: "AUTONOMOUS_AMOUNT_LIMIT_CHECK",
-  MAX_CONTACTS_CHECK: "MAX_CONTACTS_CHECK",
-  DAILY_CAPACITY_CHECK: "DAILY_CAPACITY_CHECK",
-};
+import { PolicyRuleList } from "@/components/PolicyRuleList";
 
 const POLL_INTERVAL_MS = 4000;
 const POLL_MAX_ATTEMPTS = 30; // ~2 minutes, then stop hammering the backend
@@ -196,18 +187,7 @@ export default function OpportunityDetailPage() {
               </p>
             ) : (
               <>
-                <div className="space-y-1.5">
-                  {policy.rules.map((r) => (
-                    <div key={r.rule_id} className="flex items-center justify-between gap-4">
-                      <span className={`mono text-[0.6875rem] ${r.passed ? "text-ink-2" : "text-blocked"}`}>
-                        {POLICY_RULE_LABELS[r.rule_id] ?? r.rule_id}
-                      </span>
-                      <span className={`mono text-[0.6875rem] ${r.passed ? "text-ink-2" : "text-blocked"}`}>
-                        {r.passed ? "✓ PASS" : "✕ BLOCK"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                <PolicyRuleList rules={policy.rules} dense />
                 <div className="mt-5 flex items-center justify-between">
                   <span className="label">RESULT</span>
                   <span className={`text-sm font-medium tracking-[0.14em] ${policy.decision === "ALLOW" ? "text-ink" : "text-blocked"}`}>

@@ -8,18 +8,9 @@ import { inr, pct, num } from "@/lib/format";
 import { Label, KpiCards } from "@/components/ui";
 import { StageNode } from "@/components/StageIcon";
 import { LoadingState, ErrorState, EmptyState } from "@/components/DataState";
+import { PolicyRuleList } from "@/components/PolicyRuleList";
 
 type Filter = "ALL" | "ALLOWED" | "BLOCKED" | "SKIPPED";
-
-const POLICY_RULE_LABELS: Record<string, string> = {
-  VALID_ACTION_TYPE: "VALID_ACTION_TYPE",
-  OPPORTUNITY_ACTIONABLE: "OPPORTUNITY_ACTIONABLE",
-  DO_NOT_CONTACT_CHECK: "DO_NOT_CONTACT_CHECK",
-  DUPLICATE_ACTION_CHECK: "DUPLICATE_ACTION_CHECK",
-  AUTONOMOUS_AMOUNT_LIMIT_CHECK: "AUTONOMOUS_AMOUNT_LIMIT_CHECK",
-  MAX_CONTACTS_CHECK: "MAX_CONTACTS_CHECK",
-  DAILY_CAPACITY_CHECK: "DAILY_CAPACITY_CHECK",
-};
 
 function rowStatus(o: ApiOpportunity): Filter {
   if (o.last_decision?.selected_action === "do_nothing") return "SKIPPED";
@@ -317,18 +308,7 @@ function DecisionTracePanel({ opportunityId, onClose }: { opportunityId: string;
                   <p className="text-xs text-ink-3">Not evaluated — the optimizer selected do-nothing.</p>
                 ) : (
                   <>
-                    <div className="space-y-2">
-                      {policy.rules.map((r) => (
-                        <div key={r.rule_id} className="flex items-center justify-between gap-4">
-                          <span className={`mono text-[0.6875rem] ${r.passed ? "text-ink-2" : "text-blocked"}`}>
-                            {POLICY_RULE_LABELS[r.rule_id] ?? r.rule_id}
-                          </span>
-                          <span className={`mono text-[0.6875rem] ${r.passed ? "text-ink-2" : "text-blocked"}`}>
-                            {r.passed ? "✓ PASS" : "✕ BLOCK"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                    <PolicyRuleList rules={policy.rules} />
                     <div className="mt-5 pt-4 border-t border-separator flex items-center justify-between">
                       <span className="label">RESULT</span>
                       <span className={`text-sm font-medium tracking-[0.1em] ${policy.decision === "ALLOW" ? "text-ink" : "text-blocked"}`}>{policy.decision}</span>
