@@ -1,5 +1,9 @@
 # RAY V1 Backend Dependencies
 
+# setuptools provides pkg_resources, which the razorpay SDK imports at
+# runtime; not guaranteed present on newer Python base images.
+setuptools>=70
+
 # Web Framework
 fastapi==0.115.0
 uvicorn[standard]==0.32.0
