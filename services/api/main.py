@@ -10,6 +10,7 @@ load_dotenv()
 
 # Setup Python path for imports
 from pathlib import Path
+import os
 import sys
 
 _file_path = Path(__file__).resolve()
@@ -46,10 +47,15 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS middleware for development
+# CORS: local dev origin plus any deployed frontend origins from ALLOWED_ORIGINS
+# (comma-separated, e.g. "https://web-mu-ashy.vercel.app"). No wildcard — the
+# frontend sends credentials, and CORS forbids combining "*" with credentials.
+_default_origins = ["http://localhost:3000"]
+_extra_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Next.js default
+    allow_origins=_default_origins + _extra_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
